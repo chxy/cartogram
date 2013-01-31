@@ -15,12 +15,21 @@ circle = function(xvec,yvec,rvec,border=1,col=NULL){
     }
 }
 
+nbr = function(distmtrx,k=3){
+    stopifnot(k < nrow(distmtrx))
+    res=apply(distmtrx,1,function(xv){order(xv)[1:(k+1)]})
+    res=t(res)[,2:(k+1)]
+    if (k>1) colnames(res)=paste('N',1:k,sep='')
+    return(res)
+}
+
 load('../data/usCapitals.rda')
 load('../data/crimes.rda')
 dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,10)]
 dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
 rownames(dat)=dat$Abbr
 usdist=as.matrix(dist(dat[,3:4]))
+nbr3=nbr(usdist,k=3)
 dat$density=sqrt(dat$population/dat$TotalSqMi)
 dat$density=dat$density/max(dat$density)*mean(usdist)/5
 
@@ -38,22 +47,41 @@ while (sum(sapply(err,max,0))>0.1) {
   if (s%%10==1) print(s)
   plot(Latitude~Longitude,crtloc,type='p',col=2,pch=20)
   circle(crtloc$Longitude,crtloc$Latitude,dat$density)
-  text(crtloc$Longitude,crtloc$Latitude,dat$Abbr,cex=1)
+  text(crtloc$Longitude,crtloc$Latitude,dat$Abbr,cex=0.8)
   Sys.sleep(0.3)
   
-  frc$xforce=frc$yforce=0.00000
+  frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
   idx= circleDist > crtDist
   idx= idx & lower.tri(idx)
   err= circleDist-crtDist
   for (i in which(rowSums(idx)>0)){
     for (j in which(idx[i,1:(i-1)])){
       ratio=(circleDist[i,j]-crtDist[i,j])/2/crtDist[i,j]
-      frc$xforce[i]=frc$xforce[i]+ratio*(frc$Longitude[i]-frc$Longitude[j])
-      frc$xforce[j]=frc$xforce[j]+ratio*(frc$Longitude[j]-frc$Longitude[i])
-      frc$yforce[i]=frc$yforce[i]+ratio*(frc$Latitude[i]-frc$Latitude[j])
-      frc$yforce[j]=frc$yforce[j]+ratio*(frc$Latitude[j]-frc$Latitude[i])
+      frc$xrepel[i]=frc$xrepel[i]+ratio*(crtloc$Longitude[i]-crtloc$Longitude[j])
+      frc$xrepel[j]=frc$xrepel[j]+ratio*(crtloc$Longitude[j]-crtloc$Longitude[i])
+      frc$yrepel[i]=frc$yrepel[i]+ratio*(crtloc$Latitude[i]-crtloc$Latitude[j])
+      frc$yrepel[j]=frc$yrepel[j]+ratio*(crtloc$Latitude[j]-crtloc$Latitude[i])
     }
   }
+  for (i in 1:nrow(nbr3)){
+      for (j in 1:3){
+          crtnbr=nbr3[i,j]
+          if (crtDist[i,crtnbr]/circleDist[i,crtnbr] > 1.1 && crtDist[i,crtnbr]/circleDist[i,crtnbr] < 1.5){
+              ratio=(crtDist[i,crtnbr]-circleDist[i,crtnbr])/3/crtDist[i,crtnbr]
+              frc$xattract[i]=frc$xattract[i]-ratio*(crtloc$Longitude[i]-crtloc$Longitude[crtnbr])
+              frc$xattract[crtnbr]=frc$xattract[crtnbr]-ratio*(crtloc$Longitude[crtnbr]-crtloc$Longitude[i])
+              frc$yattract[i]=frc$yattract[i]-ratio*(crtloc$Latitude[i]-crtloc$Latitude[crtnbr])
+              frc$yattract[crtnbr]=frc$yattract[crtnbr]-ratio*(crtloc$Latitude[crtnbr]-crtloc$Latitude[i])
+          }
+      }
+  }
+  frc$xforce=frc$xrepel+frc$xattract
+  frc$yforce=frc$yrepel+frc$yattract
+  closest=cbind(rownames(crtDist),rownames(crtDist)[nbr(crtDist,k=1)])
+  closest$dist=apply(closest,1,function(xv){crtDist[xv[1],xv[2]]})
+  closest$force=sqrt(frc$xforce^2+frc$yforce^2)
+  
+  
   crtloc=crtloc+frc[,3:4]
   crtDist=as.matrix(dist(crtloc))
 }
