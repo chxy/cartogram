@@ -77,11 +77,13 @@ while (sum(sapply(err,max,0))>0.1) {
   }
   frc$xforce=frc$xrepel+frc$xattract
   frc$yforce=frc$yrepel+frc$yattract
-  closest=cbind(rownames(crtDist),rownames(crtDist)[nbr(crtDist,k=1)])
+  closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nbr(crtDist,k=1)]))
   closest$dist=apply(closest,1,function(xv){crtDist[xv[1],xv[2]]})
   closest$force=sqrt(frc$xforce^2+frc$yforce^2)
+  closest$idx=closest$force>closest$dist
+  frc$xforce[closest$idx]=frc$xforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
+  frc$yforce[closest$idx]=frc$yforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
   
-  
-  crtloc=crtloc+frc[,3:4]
+  crtloc=crtloc+frc[,7:8]
   crtDist=as.matrix(dist(crtloc))
 }
