@@ -1,4 +1,7 @@
 circle = function(xvec,yvec,rvec,border=1,col=NULL){
+    # This function is used to compute the locations of the circle border 
+    # and draw multiple circles.
+    # Borrowing the code from plotrix::draw.circle
     n=length(xvec)
     stopifnot(length(yvec)==n && n==length(rvec))
     if (length(border) < n)  border = rep(border, length.out = n)
@@ -16,6 +19,7 @@ circle = function(xvec,yvec,rvec,border=1,col=NULL){
 }
 
 nnbr = function(distmtrx,k=3){
+    # Find the nearest k neighbors
     stopifnot(k < nrow(distmtrx))
     res=apply(distmtrx,1,function(xv){order(xv)[1:(k+1)]})
     res=t(res)[,2:(k+1)]
@@ -24,24 +28,26 @@ nnbr = function(distmtrx,k=3){
 }
 
 nbrlist = function(region,x,y,digit=7){
-  stopifnot(length(x)==length(region) && length(y)==length(region))
-  dat=data.frame(r=region,x=x,y=y)
-  dat$r=as.character(dat$r)
-  dat$p=paste(round(dat$x,digit),round(dat$y,digit))
-  dat=dat[!duplicated(dat),]
-  censordat=dat[duplicated(dat$p)|duplicated(dat$p,fromLast=TRUE),]
-  uniregion=sort(unique(region))
-  k=length(uniregion)
-  res1=list()
-  res2=data.frame(region=uniregion,x=NA,y=NA)
-  for (i in 1:k){
-    ins=censordat[censordat$r %in% uniregion[i],]
-    out=censordat[! censordat$r %in% uniregion[i],]
-    res1[[i]]=unique(out[out$p %in% ins$p,1])
-    res2[i,2:3]=centroid.polygon(dat[dat$r==uniregion[i],2:3])
-  }
-  names(res1)=uniregion
-  return(list(nbr=res1,centroid=res2))
+    # Find all the neighbors for the polygons by checking duplicated coordinates.
+    stopifnot(length(x)==length(region) && length(y)==length(region))
+    dat=data.frame(r=region,x=x,y=y)
+    dat$r=as.character(dat$r)
+    dat$p=paste(round(dat$x,digit),round(dat$y,digit))
+    dat=dat[!duplicated(dat),]
+    censordat=dat[duplicated(dat$p)|duplicated(dat$p,fromLast=TRUE),]
+    uniregion=sort(unique(region))
+    k=length(uniregion)
+    res1=list()
+    res2=data.frame(region=uniregion,x=NA,y=NA)
+    res2$region=as.character(res2$region)
+    for (i in 1:k){
+        ins=censordat[censordat$r %in% uniregion[i],]
+        out=censordat[! censordat$r %in% uniregion[i],]
+        res1[[i]]=unique(out[out$p %in% ins$p,1])
+        res2[i,2:3]=centroid.polygon(dat[dat$r==uniregion[i],2:3])
+    }
+    names(res1)=uniregion
+    return(list(nbr=res1,centroid=res2))
 }
 
 load('../data/usGeoInfo.rda')
@@ -68,49 +74,49 @@ s=0
 err=circleDist-crtDist
 
 while (sum(sapply(err,max,0))>0.1) {
-  s=s+1
-  if (s%%10==1) print(s)
-  plot(Latitude~Longitude,crtloc,type='p',col=2,pch=20)
-  circle(crtloc$Longitude,crtloc$Latitude,dat$density)
-  text(crtloc$Longitude,crtloc$Latitude,dat$Abbr,cex=0.8)
-  Sys.sleep(0.3)
-  
-  frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
-  idx= circleDist > crtDist
-  idx= idx & lower.tri(idx)
-  err= circleDist-crtDist
-  for (i in which(rowSums(idx)>0)){
-    for (j in which(idx[i,1:(i-1)])){
-      ratio=(circleDist[i,j]-crtDist[i,j])/2/crtDist[i,j]
-      frc$xrepel[i]=frc$xrepel[i]+ratio*(crtloc$Longitude[i]-crtloc$Longitude[j])
-      frc$xrepel[j]=frc$xrepel[j]+ratio*(crtloc$Longitude[j]-crtloc$Longitude[i])
-      frc$yrepel[i]=frc$yrepel[i]+ratio*(crtloc$Latitude[i]-crtloc$Latitude[j])
-      frc$yrepel[j]=frc$yrepel[j]+ratio*(crtloc$Latitude[j]-crtloc$Latitude[i])
+    s=s+1
+    if (s%%10==1) print(s)
+    plot(Latitude~Longitude,crtloc,type='p',col=2,pch=20)
+    circle(crtloc$Longitude,crtloc$Latitude,dat$density)
+    text(crtloc$Longitude,crtloc$Latitude,dat$Abbr,cex=0.8)
+    Sys.sleep(0.3)
+    
+    frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
+    idx= circleDist > crtDist
+    idx= idx & lower.tri(idx)
+    err= circleDist-crtDist
+    for (i in which(rowSums(idx)>0)){
+        for (j in which(idx[i,1:(i-1)])){
+            ratio=(circleDist[i,j]-crtDist[i,j])/2/crtDist[i,j]
+            frc$xrepel[i]=frc$xrepel[i]+ratio*(crtloc$Longitude[i]-crtloc$Longitude[j])
+            frc$xrepel[j]=frc$xrepel[j]+ratio*(crtloc$Longitude[j]-crtloc$Longitude[i])
+            frc$yrepel[i]=frc$yrepel[i]+ratio*(crtloc$Latitude[i]-crtloc$Latitude[j])
+            frc$yrepel[j]=frc$yrepel[j]+ratio*(crtloc$Latitude[j]-crtloc$Latitude[i])
+        }
     }
-  }
-  for (i in 1:length(nbrs)){
-      for (j in 1:length(nbrs[[i]])){
-          crtstate=names(nbrs)[i]
-          crtnbr=which(rownames(crtDist)==nbrs[[i]][j])
-          distratio=crtDist[crtstate,crtnbr]/circleDist[crtstate,crtnbr]
-          if (distratio > 2){
-              ratio=(crtDist[crtstate,crtnbr]-circleDist[crtstate,crtnbr])/(round(s/10)+8)/crtDist[crtstate,crtnbr]
-              frc$xattract[i]=frc$xattract[i]-ratio*(crtloc$Longitude[i]-crtloc$Longitude[crtnbr])
-              frc$xattract[crtnbr]=frc$xattract[crtnbr]-ratio*(crtloc$Longitude[crtnbr]-crtloc$Longitude[i])
-              frc$yattract[i]=frc$yattract[i]-ratio*(crtloc$Latitude[i]-crtloc$Latitude[crtnbr])
-              frc$yattract[crtnbr]=frc$yattract[crtnbr]-ratio*(crtloc$Latitude[crtnbr]-crtloc$Latitude[i])
-          }
-      }
-  }
-  frc$xforce=frc$xrepel+frc$xattract
-  frc$yforce=frc$yrepel+frc$yattract
-  closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
-  closest$dist=apply(closest,1,function(xv){crtDist[xv[1],xv[2]]})
-  closest$force=sqrt(frc$xforce^2+frc$yforce^2)
-  closest$idx=closest$force>closest$dist
-  frc$xforce[closest$idx]=frc$xforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
-  frc$yforce[closest$idx]=frc$yforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
-  
-  crtloc=crtloc+frc[,7:8]
-  crtDist=as.matrix(dist(crtloc))
+    for (i in 1:length(nbrs)){
+        for (j in 1:length(nbrs[[i]])){
+            crtstate=names(nbrs)[i]
+            crtnbr=which(rownames(crtDist)==nbrs[[i]][j])
+            distratio=crtDist[crtstate,crtnbr]/circleDist[crtstate,crtnbr]
+            if (distratio > 2){
+                ratio=(crtDist[crtstate,crtnbr]-circleDist[crtstate,crtnbr])/(round(s/10)+8)/crtDist[crtstate,crtnbr]
+                frc$xattract[i]=frc$xattract[i]-ratio*(crtloc$Longitude[i]-crtloc$Longitude[crtnbr])
+                frc$xattract[crtnbr]=frc$xattract[crtnbr]-ratio*(crtloc$Longitude[crtnbr]-crtloc$Longitude[i])
+                frc$yattract[i]=frc$yattract[i]-ratio*(crtloc$Latitude[i]-crtloc$Latitude[crtnbr])
+                frc$yattract[crtnbr]=frc$yattract[crtnbr]-ratio*(crtloc$Latitude[crtnbr]-crtloc$Latitude[i])
+            }
+        }
+    }
+    frc$xforce=frc$xrepel+frc$xattract
+    frc$yforce=frc$yrepel+frc$yattract
+    closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
+    closest$dist=apply(closest,1,function(xv){crtDist[xv[1],xv[2]]})
+    closest$force=sqrt(frc$xforce^2+frc$yforce^2)
+    closest$idx=closest$force>closest$dist
+    frc$xforce[closest$idx]=frc$xforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
+    frc$yforce[closest$idx]=frc$yforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
+    
+    crtloc=crtloc+frc[,7:8]
+    crtDist=as.matrix(dist(crtloc))
 }
