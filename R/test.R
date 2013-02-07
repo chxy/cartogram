@@ -52,15 +52,18 @@ nbrlist = function(region,x,y,digit=7){
 
 load('../data/usGeoInfo.rda')
 load('../data/crimes.rda')
-dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,9,10,12)]
+# dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,9,10,12)]
+dat=merge(usCapitals,chsiALE,by.x='Abbr',by.y='CHSI_State_Abbr')[,c(1,2,4,5,6,9,10,11,12)]
 dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
 rownames(dat)=dat$Abbr
 usdist=as.matrix(dist(dat[,3:4]))
-#nbr3=nnbr(usdist,k=3)
 nbrs=statenbrs[names(statenbrs) %in% rownames(dat)]
 nbrs=lapply(nbrs,function(xv){xv[xv %in% rownames(dat)]})
-dat$density=sqrt(dat$population/dat$TotalSqMi)
+#dat$density=sqrt(dat$population/dat$TotalSqMi)
+dat$density=dat$DeathPct
+#dat$density=dat$ALE-min(dat$ALE)+2
 dat$density=dat$density/max(dat$density)*mean(usdist)/5
+
 
 circleDist=outer(dat$density,dat$density,"+")
 diag(circleDist)=0
