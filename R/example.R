@@ -37,3 +37,13 @@ library(plyr)
 chsiALE=ddply(chsi,"CHSI_State_Abbr",summarize,ALE=sum(ALE*Population_Size,na.rm=T)/sum(Population_Size),DeathPct=sum(Total_Deaths,na.rm=T)/sum(Population_Size)*100)
 
 
+################################################################################
+library(maps)
+county=map("county",plot=FALSE,fill=TRUE)
+a=county$names
+b=tolower(paste(chsi[,4],chsi[,3],sep=','))
+b=gsub(",st\\. ",",st ",b)
+a=gsub(",de ",",de",a)
+b=gsub("'","",b)
+setdiff(a,b)
+setdiff(b,a)
