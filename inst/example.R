@@ -47,3 +47,7 @@ a=gsub(",de ",",de",a)
 b=gsub("'","",b)
 setdiff(a,b)
 setdiff(b,a)
+
+################################################################################
+library(shiny)
+runApp("dorling")
