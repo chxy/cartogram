@@ -14,9 +14,9 @@ shinyUI(pageWithSidebar(
         
         sliderInput("iteration", 
                     "The number of iterations running with one click :", 
-                    min = 10, 
-                    max = 200, 
-                    value = 30,
+                    min = 1, 
+                    max = 201, 
+                    value = 51,
                     step = 10),
         
         submitButton(text = "Update View")
