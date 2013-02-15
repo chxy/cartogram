@@ -19,7 +19,7 @@ shinyUI(pageWithSidebar(
                     value = 51,
                     step = 10),
         
-        submitButton(text = "Update View")
+        # submitButton(text = "Update View")
     ),
     
     mainPanel(
