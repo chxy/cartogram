@@ -16,10 +16,10 @@ shinyUI(pageWithSidebar(
                     "The number of iterations running with one click :", 
                     min = 1, 
                     max = 201, 
-                    value = 51,
+                    value = 11,
                     step = 10),
         
-        # submitButton(text = "Update View")
+        submitButton(text = "Update View")
     ),
     
     mainPanel(

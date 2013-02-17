@@ -4,10 +4,11 @@ load('../data/usGeoInfo.rda')
 load('../data/crimes.rda')
 dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,9,10,12)]
 dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
-rownames(dat)=dat$Abbr
-nbrs=statenbrs[names(statenbrs) %in% rownames(dat)]
-nbrs=lapply(nbrs,function(xv){xv[xv %in% rownames(dat)]})
+nbrs=statenbrs[names(statenbrs) %in% dat$Abbr]
+nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 dat$density=sqrt(dat$population/dat$TotalSqMi)
+
+dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs)
 
 ##### Example 2 ##### CHSI:deathpct/ALE #####
 
@@ -18,11 +19,11 @@ chsiALE=ddply(chsi,"CHSI_State_Abbr",summarize,ALE=sum(ALE*Population_Size,na.rm
 
 dat=merge(usCapitals,chsiALE,by.x='Abbr',by.y='CHSI_State_Abbr')[,c(1,2,4,5,6,9,10,11,12)]
 dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
-rownames(dat)=dat$Abbr
-nbrs=statenbrs[names(statenbrs) %in% rownames(dat)]
-nbrs=lapply(nbrs,function(xv){xv[xv %in% rownames(dat)]})
-dat$density=dat$DeathPct
-#dat$density=dat$ALE-min(dat$ALE)+2
+nbrs=statenbrs[names(statenbrs) %in% dat$Abbr]
+nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
+
+dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$DeathPct,nbrs)
+dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$ALE-min(dat$ALE)+2,nbrs)
 
 ################################################################################
 
