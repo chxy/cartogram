@@ -105,7 +105,7 @@ nbrlist = function(region,x,y){
 ##' @example inst/example.R
 ##' @export
 ##' 
-dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1, dist.ratio=2, iteration=9999, animation=TRUE, sleep.time=0.3, ...){
+dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, animation=TRUE, sleep.time=0.3, ...){
     n=length(name)
     stopifnot(n==length(centroidx), n==length(centroidy), n==length(density), is.numeric(iteration))
     
@@ -189,7 +189,7 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1,
                 crtstate=names(nbr)[i]
                 crtnbr=which(rownames(crtDist)==nbr[[i]][j])
                 distratio=crtDist[crtstate,crtnbr]/circleDist[crtstate,crtnbr]
-                if (distratio > dist.ratio){
+                if (distratio > dist.ratio & crtDist[crtstate,crtnbr]>origindist[crtstate,crtnbr]){
                     ratio=(crtDist[crtstate,crtnbr]-circleDist[crtstate,crtnbr])/(round(s/10)+8)/crtDist[crtstate,crtnbr]
                     frc$xattract[i]=frc$xattract[i]-ratio*(crtloc$x[i]-crtloc$x[crtnbr])
                     frc$xattract[crtnbr]=frc$xattract[crtnbr]-ratio*(crtloc$x[crtnbr]-crtloc$x[i])
@@ -207,15 +207,20 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1,
         closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
         closest$xdist=apply(closest,1,function(xv){abs(crtloc[xv[1],1]-crtloc[xv[2],1])})
         closest$ydist=apply(closest,1,function(xv){abs(crtloc[xv[1],2]-crtloc[xv[2],2])})
+        closest$dist=sqrt(closest$xdist^2+closest$ydist^2)
         closest$xforce=abs(frc$xforce)
         closest$yforce=abs(frc$yforce)
+        closest$force=sqrt(closest$xforce^2+closest$yforce^2)
         closest$xratio=closest$xdist/closest$xforce
         closest$yratio=closest$ydist/closest$yforce
-        closest$ratio=pmin(closest$xratio,closest$yratio,na.rm=TRUE)
-        closest$ratio[closest$ratio>1]=1
-        frc$xforce=frc$xforce*closest$ratio
-        frc$yforce=frc$yforce*closest$ratio
-        
+        closest$ratio=closest$dist/closest$force
+        closest$xratio[closest$xratio<tolerance]=1
+        closest$yratio[closest$yratio<tolerance]=1
+        closest$ratio[closest$ratio<tolerance]=1
+        closest$r=pmin(closest$xratio,closest$yratio,closest$ratio,na.rm=TRUE)
+        closest$r[closest$r>1]=1
+        frc$xforce=frc$xforce*closest$r
+        frc$yforce=frc$yforce*closest$r
         crtloc=crtloc+frc[,8:7]
         crtDist=as.matrix(dist(crtloc))
     }

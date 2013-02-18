@@ -8,7 +8,8 @@ nbrs=statenbrs[names(statenbrs) %in% dat$Abbr]
 nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 dat$density=sqrt(dat$population/dat$TotalSqMi)
 
-dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs)
+dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,iteration=100)
+dorling(dat$Abbr,dat$centroidx,dat$centroidy,dat$density,nbrs,iteration=50,animation=FALSE)
 
 ##### Example 2 ##### CHSI:deathpct/ALE #####
 
