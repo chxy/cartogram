@@ -184,10 +184,10 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1,
         }
         
         # Calculate the attract force
-        for (i in 1:length(nbrs)){
-            for (j in 1:length(nbrs[[i]])){
-                crtstate=names(nbrs)[i]
-                crtnbr=which(rownames(crtDist)==nbrs[[i]][j])
+        for (i in 1:length(nbr)){
+            for (j in 1:length(nbr[[i]])){
+                crtstate=names(nbr)[i]
+                crtnbr=which(rownames(crtDist)==nbr[[i]][j])
                 distratio=crtDist[crtstate,crtnbr]/circleDist[crtstate,crtnbr]
                 if (distratio > dist.ratio){
                     ratio=(crtDist[crtstate,crtnbr]-circleDist[crtstate,crtnbr])/(round(s/10)+8)/crtDist[crtstate,crtnbr]
@@ -205,13 +205,18 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, tolerance=0.1,
         
         # Reduce the force if it changes the relative direction of the neighbors
         closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
-        closest$dist=apply(closest,1,function(xv){crtDist[xv[1],xv[2]]})
-        closest$force=sqrt(frc$xforce^2+frc$yforce^2)
-        closest$idx=closest$force>closest$dist
-        frc$xforce[closest$idx]=frc$xforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
-        frc$yforce[closest$idx]=frc$yforce[closest$idx]*closest$dist[closest$idx]/closest$force[closest$idx]
+        closest$xdist=apply(closest,1,function(xv){abs(crtloc[xv[1],1]-crtloc[xv[2],1])})
+        closest$ydist=apply(closest,1,function(xv){abs(crtloc[xv[1],2]-crtloc[xv[2],2])})
+        closest$xforce=abs(frc$xforce)
+        closest$yforce=abs(frc$yforce)
+        closest$xratio=closest$xdist/closest$xforce
+        closest$yratio=closest$ydist/closest$yforce
+        closest$ratio=pmin(closest$xratio,closest$yratio,na.rm=TRUE)
+        closest$ratio[closest$ratio>1]=1
+        frc$xforce=frc$xforce*closest$ratio
+        frc$yforce=frc$yforce*closest$ratio
         
-        crtloc=crtloc+frc[,7:8]
+        crtloc=crtloc+frc[,8:7]
         crtDist=as.matrix(dist(crtloc))
     }
     
