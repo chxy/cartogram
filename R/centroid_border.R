@@ -1,0 +1,97 @@
+##' Find the centroids for the polygons.
+##' 
+##' @param region Region names.
+##' @param x X-coordinates.
+##' @param y Y-coordinates.
+##' @return A data frame with region names and coordinates of the centroids.
+##' @export
+##' @examples
+##' data(usCapitals)
+##' state_centroid=centroid(state$abbr,state$x,state$y)
+##'
+centroid = function(region,x,y){
+    stopifnot(length(x)==length(region) && length(y)==length(region))
+    dat=data.frame(r=region,x=x,y=y)
+    uniregion=sort(unique(region))
+    res=data.frame(region=uniregion,x=NA,y=NA)
+    res$region=as.character(res$region)
+    library(maps)
+    res[i,2:3]=centroid.polygon(dat[dat$r==uniregion[i],2:3])
+    return(res)
+}
+
+##' Find the counts of shared border and perimeter for polygons.
+##' 
+##' @param region Region names.
+##' @param x X-coordinates of all the border.
+##' @param y Y-coordinates of all the border.
+##' @return A square matrix with diagonal elements being the perimeter (count of border points) of the polygon, and the non-diagonal cells being the count of shared border between the polygons on the row and column.
+##' @export
+##' @examples
+##' data(usCapitals)
+##' state_border=border_summary(state$abbr,state$x,state$y)
+##' 
+border_summary = function(region, x, y){
+    stopifnot(length(x)==length(region) && length(y)==length(region))
+    name = sort(unique(region))
+    k = length(name)
+    digitx = max(min(nchar(as.character(x))),5)
+    digity = max(min(nchar(as.character(y))),5)
+    dat=data.frame(r=region,x=x,y=y)
+    dat$r=as.character(dat$r)
+    dat$p=paste(round(dat$x,digitx),round(dat$y,digity))
+    dat=dat[!duplicated(dat),]
+    perimeter=table(dat$r)
+    
+    censordat=dat[duplicated(dat$p)|duplicated(dat$p,fromLast=TRUE),c('r','p')]
+    peri=table(censordat$r)
+    uniregion=names(peri)[order(peri,decreasing=TRUE)]
+    
+    s=0
+    border=data.frame(r=NULL,r2=NULL)
+    while (nrow(censordat)>0){
+        s=s+1
+        idx1=censordat$r %in% uniregion[s]
+        if (sum(idx1)>0){
+            tmp1=censordat[idx1,]
+            censordat=censordat[!idx1,]
+            idx2=censordat$p %in% tmp1$p
+            tmp2=censordat[idx2,]
+            censordat=censordat[!idx2,]
+            
+            idx3= duplicated(tmp2$p) | duplicated(tmp2$p,fromLast=TRUE)
+            if (sum(idx3)>0) {
+                tmp3=tmp2[idx3,]
+                tmp2=tmp2[!idx3,]
+                tmpp=tmp1[tmp1$p %in% tmp3$p, c('p','r')]
+                for (i in 1:nrow(tmpp)){
+                    tmpdat=tmp3[tmp3$p==tmpp$p[i],]
+                    tmpstate=c(tmpp$r[i],tmpdat$r)
+                    tmpborder=t(combn(tmpstate,2))
+                    colnames(tmpborder)=c('r','r2')
+                    border=rbind(border,tmpborder)
+                }
+            }        
+            tmpp=tmp1[tmp1$p %in% tmp2$p, c('p','r')]
+            tmpp=tmpp[order(tmpp$p),]
+            tmpp$r2=tmp2$r[order(tmp2$p)]
+            border=rbind(border,tmpp[,2:3])        
+        }
+    }
+    
+    res=matrix(0,nrow=k,ncol=k)
+    colnames(res)=rownames(res)=name
+    diag(res)=perimeter
+    res1=table(border)
+    cnames=colnames(res1)
+    rnames=rownames(res1)
+    for (i in 1:nrow(res1)){
+        for (j in 1:ncol(res1)){
+            if (res1[i,j]>0) {
+                res[rnames[i],cnames[j]]=res[rnames[i],cnames[j]]+res1[i,j]
+                res[cnames[j],rnames[i]]=res[cnames[j],rnames[i]]+res1[i,j]
+            }
+        }
+    }
+    return(res)
+}
