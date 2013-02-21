@@ -9,12 +9,13 @@
 ##' @param tolerance Tolerant value for the sum of overlapped radii.
 ##' @param dist.ratio The threshold to determine whether an attract force is added. It is applied to the ratio of the distance between two centroids, and the sum of those two radii.
 ##' @param iteration The limit of the number of iterations. Default to be 9999.
+##' @param polygon.vertex The number of vertice of the circle. Default to be 100. If polygon.vertex=4 then diamands applies. If polygon.vertex=6, then hexagon applies.
 ##' @param animation Whether to show the movements of centroids.
 ##' @param sleep.time Only works when animation=TRUE.
 ##' @example inst/example.R
 ##' @export
 ##' 
-dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, animation=TRUE, sleep.time=0.3, ...){
+dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, ...){
     n=length(name)
     stopifnot(n==length(centroidx), n==length(centroidy), n==length(density), is.numeric(iteration))
     
@@ -70,8 +71,8 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
         }
         if (s%%10==0) cat("Iteration: ",s,"\n")
         if (animation) {
-            plot(y~x,crtloc,type='p',col=2,pch=20,...)
-            circle(crtloc$x,crtloc$y,dat$density)
+            plot(y~x,crtloc,type='p',col=2,pch=20)
+            circle(crtloc$x,crtloc$y,dat$density,vertex=polygon.vertex,...)
             text(crtloc$x,crtloc$y,dat$name,cex=0.8)
             Sys.sleep(sleep.time)
         }
@@ -135,7 +136,7 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
         crtDist=as.matrix(dist(crtloc))
     }
     
-    plot(y~x,crtloc,type='p',col=2,pch=20,...)
-    circle(crtloc$x,crtloc$y,dat$density)
+    plot(y~x,crtloc,type='p',col=2,pch=20)
+    circle(crtloc$x,crtloc$y,dat$density,vertex=polygon.vertex,...)
     text(crtloc$x,crtloc$y,dat$name,cex=0.8)
 }
