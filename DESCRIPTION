@@ -1,0 +1,10 @@
+Package: Cartograms
+Type: Package
+Title: Create cartograms in R
+Version: 0.0.1
+Date: 2013-02-21
+Author: Xiaoyue Cheng, Dianne Cook
+Maintainer: Xiaoyue Cheng <xycheng@iastate.edu>
+Description: Making cartograms. Dorling and Dorling-like cartograms.
+Depends: maps
+License: GPL
