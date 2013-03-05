@@ -57,5 +57,38 @@ for (k in 1:length(idx)){
 }
 
 gridstate1=gridstate[!is.na(gridstate$polygon),]
-plot(y~x,data=gridstate1,pch=15,col=factor(gsub(":.+$","",gridstate1$polygon)))
+gridstate1$state=gsub(":.+$","",gridstate1$polygon)
+gridstate1$state=factor(gridstate1$state,levels=names(sort(table(gridstate1$state),decreasing=TRUE)))
+plot(y~x,data=gridstate1,pch=15,col=factor(gridstate1$state))
 map("state",add=TRUE)
+
+a=crimes[,c(1,3,5)]
+a=a[-c(2,11),]
+a$murder=a[,3]/a[,2]
+a=a[,-(2:3)]
+a$area=table(gridstate1$state)[a$state]
+rownames(a)=a$state
+a$goal=round(a$murder*mean(a$area)/mean(a$murder))
+
+gridstate$state=gsub(":.+$","",gridstate$polygon)
+gridstate2=gridstate[,c(1,2,5)]
+ydist=length(ygrid1)
+ncell=nrow(gridstate2)
+for (i in 1:ncell){
+    bottom = i-1
+    top    = i+1
+    left   = i-ydist
+    right  = i+ydist
+    if (i %% ydist == 1)  bottom = NA
+    if (i %% ydist == 0)  top    = NA
+    if (i <= ydist)       left   = NA
+    if (i >  ncell-ydist) right  = NA
+    fournbrs=c(bottom,top,left,right)
+    cellnbrs=gridstate2[fournbrs,3]
+    if (any(cellnbrs != gridstate2[i,3], na.rm=TRUE)) {
+        mynbrs=na.omit(cellnbrs[cellnbrs != gridstate2[i,3]])
+        goal=a[mynbrs,'goal']
+        if (max(goal)>a[gridstate2[i,3],'goal']) gridstate2[i,3]=mynbrs[which.max(goal)]
+    }
+}
+plot(y~x,data=gridstate2,pch=15,col=factor(gridstate2$state))
