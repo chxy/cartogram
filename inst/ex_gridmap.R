@@ -1,4 +1,5 @@
 data(usGeoInfo)
+mypal=palette(colors()[c(1:30,71:88)*5+3])
 
 library(maps)
 library(plyr)
@@ -74,6 +75,9 @@ gridstate$state=gsub(":.+$","",gridstate$polygon)
 gridstate2=gridstate[,c(1,2,5)]
 ydist=length(ygrid1)
 ncell=nrow(gridstate2)
+
+a$crtarea=table(gridstate2$state)[a$state]
+gridstate3=gridstate2
 for (i in 1:ncell){
     bottom = i-1
     top    = i+1
@@ -84,11 +88,12 @@ for (i in 1:ncell){
     if (i <= ydist)       left   = NA
     if (i >  ncell-ydist) right  = NA
     fournbrs=c(bottom,top,left,right)
-    cellnbrs=gridstate2[fournbrs,3]
-    if (any(cellnbrs != gridstate2[i,3], na.rm=TRUE)) {
-        mynbrs=na.omit(cellnbrs[cellnbrs != gridstate2[i,3]])
+    cellnbrs=gridstate3[fournbrs,3]
+    if (any(cellnbrs != gridstate3[i,3], na.rm=TRUE)) {
+        mynbrs=na.omit(cellnbrs[cellnbrs != gridstate3[i,3]])
         goal=a[mynbrs,'goal']
-        if (max(goal)>a[gridstate2[i,3],'goal']) gridstate2[i,3]=mynbrs[which.max(goal)]
+        candidate=mynbrs[which.max(goal)]
+        if (a[candidate,'goal']>a[candidate,'crtarea'] && a[gridstate3[i,3],'goal']<a[gridstate3[i,3],'crtarea']) gridstate2[i,3]=candidate
     }
 }
-plot(y~x,data=gridstate2,pch=15,col=factor(gridstate2$state))
+plot(y~x,data=gridstate2,pch=15,col=factor(gridstate2$state,levels=a$state))
