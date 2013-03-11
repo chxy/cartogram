@@ -3,8 +3,8 @@
 ##' @param xborder A vector of x-coordinates of the border.
 ##' @param yborder A vector of y-coordinates of the border.
 ##' @param name A vector of the polygon names. Must be of the same length with xborder, and unique for each polygon.
-##' @param density A vector of the variable of interest. The length is the same as the number of unique labels. A name must be given to each element to match the label.
-##' @param label A vector of the displayed names for polygons. One label could be used for several polygons. Must be of the same length as name.
+##' @param density A vector of the variable of interest. The length is the same as the number of labels. A name must be given to each element to match the label.
+##' @param label A vector of the displayed names for polygons. One label could be used for several polygons. Must be unique.
 ##' @param binwidth A vector of length 2 indicating the binwidths in x and y direction. Default to be 1/50 of the range.
 ##' @example inst/ex_gridmap.R
 ##' @export
@@ -13,7 +13,7 @@ checkerboard = function(xborder,yborder,name,label=NULL,density=1,
                         binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50)){
     nborder=length(name)
     stopifnot(nborder==length(xborder),nborder==length(yborder))
-    if (is.null(label)) {label=sort(unique(label)); names(label)=label} else {
+    if (is.null(label)) {label=sort(unique(name)); names(label)=label} else {
         region=unique(name)
         stopifnot(length(label)>=length(region),all(region %in% names(label)))
     }    
