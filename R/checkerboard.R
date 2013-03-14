@@ -1,21 +1,23 @@
-##' Produce a Checkerboard Cartogram.
+##' Produce a Checkerboard Map
 ##' 
 ##' @param xborder A vector of x-coordinates of the border.
 ##' @param yborder A vector of y-coordinates of the border.
-##' @param name A vector of the polygon names. Must be of the same length with xborder, and unique for each polygon.
-##' @param density A vector of the variable of interest. The length is the same as the number of labels. A name must be given to each element to match the label.
-##' @param label A vector of the displayed names for polygons. One label could be used for several polygons. Must be unique.
+##' @param name A vector of the polygon names. Must be of the same length with \code{xborder}, and unique for each polygon.
+##' @param label A vector of the displayed names for polygons. One label could serve several polygons. Must be unique and \code{names(label)} must contain all the unique input \code{name}.
 ##' @param binwidth A vector of length 2 indicating the binwidths in x and y direction. Default to be 1/50 of the range.
+##' @param plot Whether to plot the checkerboard map.
+##' @return A data frame of four columns: x and y coordinates of the grids, the name and the label that a grid point belongs to.
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-checkerboard = function(xborder,yborder,name,label=NULL,density=1,
-                        binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50)){
+checkerboard = function(xborder,yborder,name,label=NULL,
+                        binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50),
+                        plot=TRUE){
     nborder=length(name)
     stopifnot(nborder==length(xborder),nborder==length(yborder))
     if (is.null(label)) {label=sort(unique(name)); names(label)=label} else {
         region=unique(name)
-        stopifnot(length(label)>=length(region),all(region %in% names(label)))
+        stopifnot(length(label)>=length(region), all(region %in% names(label)))
     }    
     if (length(density)==1) {density=rep(1,length(region)); names(density)=region}
     stopifnot(length(density)>=length(region),all(region %in% names(density)))
@@ -27,11 +29,13 @@ checkerboard = function(xborder,yborder,name,label=NULL,density=1,
     ygrid=seq(min(yrange)+0.4*binwidth[2],max(yrange),by=binwidth[2])
     
     grids=data.frame(x=rep(xgrid,each=length(ygrid)),y=rep(ygrid,times=length(xgrid)))    
-    query=t(apply(grids,1,pointinsquares,sqxrange=xrange,sqyrange=yrange,sqname=unique(name)))
+    query=t(apply(grids,1,pointinsquares,sqxrange=xrange,sqyrange=yrange,sqname=sort(unique(name))))
     query=query[,colSums(is.na(query))!=nrow(query)]
     maxin=ncol(query)
-    grids[,3:4]=query[,1:2]
-    colnames(grids)[3:4]=c('edge','poly1')
+    grids[,3:4]=query[,2:1]
+    colnames(grids)[3:4]=c('poly','edge')
+    
+    txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
     library(sp)
     idx = which(grids$edge>1)
@@ -44,20 +48,44 @@ checkerboard = function(xborder,yborder,name,label=NULL,density=1,
         for (j in 1:length(pol)){
             whicharea[j]=point.in.polygon(ptx,pty,xborder[name==pol[j]],yborder[name==pol[j]])
         }
-        if (any(whicharea>0)) {grids[i,4]=pol[whicharea>0][1]}
-        if (k%%100==0) print(k)
-    }    
+        if (any(whicharea>0)) {grids[i,3]=pol[whicharea>0][1]}
+        setTxtProgressBar(txtpb, 0.5/length(idx)*k)
+    }
     idx = which(grids$edge==1)
     for (k in 1:length(idx)){
         i=idx[k]
-        pol=query[i,2]
+        pol=grids[i,3]
         ptx=grids[i,1]
         pty=grids[i,2]
         whicharea=point.in.polygon(ptx,pty,xborder[name==pol],yborder[name==pol])
-        if (whicharea==0) {grids[i,4]=NA}
-        if (k%%100==0) print(k)
+        if (whicharea==0) {grids[i,3]=NA}
+        setTxtProgressBar(txtpb, 0.5/length(idx)*k+0.5)
     }
+    close(txtpb)
+    
+    grids$label = factor(label[grids$poly],levels=unique(label))
+    if (plot) plot(y~x,data=grids,pch=15,col=grids$label)
+    return(grids[,c(1:3,5)])
 }
+
+
+##' Produce a Grid-based Cartogram
+##' 
+##' @param grids The output of function \code{checkerboard}.
+##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
+##' @return A data frame indicating the grids and their new affiliation.
+##' @example inst/ex_gridmap.R
+##' @export
+##'
+
+grid_cart = function(grids,density,iteration,plot=FALSE)}{
+    stopifnot(length(intersect(names(density),unique(grids$label)))>1)
+    dens=cbind(density,table(grids$label)[names(density)])
+    colnames(dens)=c('density','orig_area')
+    rownames(dens)=names(density)
+    dens$goal=round(dens$density*mean(dens$orig_area)/mean(dens$density))
+}
+
 
 ##' Whether a point locates in the squares.
 ##' 

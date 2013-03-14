@@ -2,29 +2,29 @@ data(usGeoInfo)
 data(crimes)
 palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),48,rep=FALSE))
 
+unipoly=!duplicated(state$polygon)
+statelabel=state$state[unipoly]
+names(statelabel)=state$polygon[unipoly]
+gridmap=checkerboard(state$x,state$y,state$polygon,statelabel)
 library(maps)
-gridstate1=grids[!is.na(grids$poly1),]
-gridstate1$state=gsub(":.+$","",gridstate1$poly1)
-gridstate1$state=factor(gridstate1$state,levels=names(sort(table(gridstate1$state),decreasing=TRUE)))
-plot(y~x,data=gridstate1,pch=15,col=factor(gridstate1$state))
 map("state",add=TRUE)
 
 library(randomForest)
-mytree=randomForest(state~x+y+(x+y)+(x-y),gridstate1)
-plot(y~x,data=gridstate1,pch=15,col=predict(mytree,type = "class"))
+mygrid=gridmap[!is.na(gridmap$label),c(1,2,4)]
+mygrid$label=as.factor(as.character(mygrid$label))
+mytree=randomForest(label~x+y+(x+y)+(x-y),data=mygrid)
+plot(y~x,data=mygrid,pch=15,col=predict(mytree,type = "class"))
 
 a=crimes[,c(1,3,5)]
 a=a[-c(2,11),]
 a$murder=a[,3]/a[,2]
 a=a[,-(2:3)]
-a$area=table(gridstate1$state)[a$state]
+a$area=table(gridmap$label)[a$state]
 rownames(a)=a$state
 a$goal=round(a$murder*mean(a$area)/mean(a$murder))
 
-gridstate$state=gsub(":.+$","",gridstate$polygon)
-gridstate2=gridstate[,c(1,2,5)]
-ydist=length(ygrid1)
-ncell=nrow(gridstate2)
+ydist=sum(gridmap$x==gridmap$x[1])
+ncell=nrow(mygrid)
 a$crtarea=table(gridstate2$state)[a$state]
 
 plot(y~x,data=gridstate2,pch=15,col=factor(gridstate2$state,levels=a$state))
