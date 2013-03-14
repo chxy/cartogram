@@ -73,17 +73,73 @@ checkerboard = function(xborder,yborder,name,label=NULL,
 ##' 
 ##' @param grids The output of function \code{checkerboard}.
 ##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
-##' @return A data frame indicating the grids and their new affiliation.
+##' @param iteration The number of iterations.
+##' @param animation Whether to plot the map in each iteration.
+##' @param sleep.time Only works when animation=TRUE.
+##' @return grids indicates the grids and their new affiliation.
+##' @return count  
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
 
-grid_cart = function(grids,density,iteration,plot=FALSE)}{
+grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2){
+    all_labels=levels(grids$label)
+    grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
-    dens=cbind(density,table(grids$label)[names(density)])
-    colnames(dens)=c('density','orig_area')
+    grids=grids[grids$label %in% names(density) | is.na(grids$label),]
+    
+    dens=data.frame(density=density,orig_area=table(grids$label)[names(density)])
     rownames(dens)=names(density)
+    dens=dens[!is.na(dens$orig_area),]
     dens$goal=round(dens$density*mean(dens$orig_area)/mean(dens$density))
+    dens$crt_area=dens$orig_area
+    
+    xgrid=length(unique(grids$x))
+    ygrid=length(unique(grids$y))
+    ncell=xgrid*ygrid
+    if (ncell!=nrow(grids)) stop("The input is not a full grid.")
+    crtgrid=grids
+    sse=rep(NA,iteration)
+    
+    for (k in 1:iteration){
+        if (animation) {
+            plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
+            Sys.sleep(sleep.time)
+        }
+        tmpgrid=crtgrid
+        ord=order(dens$goal-dens$crt_area)[1:sum((dens$goal-dens$crt_area)<0)]
+        for (j in ord){
+            idxj = which(crtgrid$label==rownames(dens)[j])
+            for (i in idxj){
+                bottom = i-1
+                top    = i+1
+                left   = i-ygrid
+                right  = i+ygrid
+                if (i %% ygrid == 1)  bottom = NA
+                if (i %% ygrid == 0)  top    = NA
+                if (i <= ygrid)       left   = NA
+                if (i >  ncell-ygrid) right  = NA
+                fournbrs=c(bottom,top,left,right)
+                cell=tmpgrid[i,4]
+                cellnbrs=tmpgrid[fournbrs,4]
+                cond1 = all(cellnbrs[1:2]==cell,na.rm=TRUE) & all(cellnbrs[3:4]!=cell,na.rm=TRUE)
+                cond2 = all(cellnbrs[1:2]!=cell,na.rm=TRUE) & all(cellnbrs[3:4]==cell,na.rm=TRUE)
+                if (any(cellnbrs != cell, na.rm=TRUE) && (!cond1) && (!cond2)) {
+                    mynbrs=na.omit(cellnbrs[cellnbrs != cell])
+                    goal=dens[mynbrs,'goal']
+                    candidate=mynbrs[which.max(goal)]
+                    if ((!candidate %in% rownames(dens)[ord[1:j]]) && dens[cell,'crt_area']>3) {
+                        crtgrid[i,4]=candidate
+                        dens$crt_area=table(crtgrid$label)[rownames(dens)]
+                    }
+                }
+            }
+        }
+        sse[k]=sum((dens$goal-dens$crt_area)^2)
+        cat(k," step - SSE - ",sse[k],"\n")
+    }
+    plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
+    return(list(grids=crtgrid[,c(1,2,4)],count=dens,SSE=sse))
 }
 
 
