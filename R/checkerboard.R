@@ -10,7 +10,7 @@
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-checkerboard = function(xborder,yborder,name,label=NULL,
+checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
                         binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50),
                         plot=TRUE){
     nborder=length(name)
@@ -21,6 +21,11 @@ checkerboard = function(xborder,yborder,name,label=NULL,
     }    
     if (length(density)==1) {density=rep(1,length(region)); names(density)=region}
     stopifnot(length(density)>=length(region),all(region %in% names(density)))
+    if (!is.null(nbins)) {
+        nbins=round(nbins)
+        stopifnot(nbins>10)
+        binwidth=c(diff(range(xborder))/nbins,diff(range(yborder))/nbins)
+    }
     
     xrange=matrix(unlist(tapply(xborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
     yrange=matrix(unlist(tapply(yborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
