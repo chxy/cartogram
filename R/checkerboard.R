@@ -77,16 +77,24 @@ checkerboard = function(xborder,yborder,name,label=NULL,
 ##' @param animation Whether to plot the map in each iteration.
 ##' @param sleep.time Only works when animation=TRUE.
 ##' @return grids indicates the grids and their new affiliation.
-##' @return count  
+##' @return count original size, goal size and current size of the regions.
+##' @return error sum of squared error and sum of absolute error
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
 
-grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2){
+grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,preserve.sea=TRUE){
     all_labels=levels(grids$label)
     grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
     grids=grids[grids$label %in% names(density) | is.na(grids$label),]
+    
+    xgrid=length(unique(grids$x))
+    ygrid=length(unique(grids$y))
+    ncell=xgrid*ygrid
+    if (ncell!=nrow(grids)) stop("The input is not a full grid.")
+    crtgrid=grids
+    sse=sae=rep(NA,iteration)
     
     dens=data.frame(density=density,orig_area=table(grids$label)[names(density)])
     rownames(dens)=names(density)
@@ -94,13 +102,15 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2)
     dens$goal=round(dens$density*mean(dens$orig_area)/mean(dens$density))
     dens$crt_area=dens$orig_area
     
-    xgrid=length(unique(grids$x))
-    ygrid=length(unique(grids$y))
-    ncell=xgrid*ygrid
-    if (ncell!=nrow(grids)) stop("The input is not a full grid.")
-    crtgrid=grids
-    sse=rep(NA,iteration)
-    
+    if (!preserve.sea){
+        grids$label[is.na(grids$label)]="outer"
+        crtgrid=grids
+        dens=rbind(dens,dens[1,])
+        rownames(dens)[nrow(dens)]="outer"
+        dens["outer","density"]=mean(density)
+        dens["outer",2]=dens["outer",3]=dens["outer",4]=ncell-sum(dens$orig_area)
+    }    
+        
     for (k in 1:iteration){
         if (animation) {
             plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
@@ -136,10 +146,11 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2)
             }
         }
         sse[k]=sum((dens$goal-dens$crt_area)^2)
-        cat(k," step - SSE - ",sse[k],"\n")
+        sae[k]=sum(abs(dens$goal-dens$crt_area))
+        cat(k," step, SSE - ",sse[k],", ABS error - ",sae[k],"\n")
     }
     plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
-    return(list(grids=crtgrid[,c(1,2,4)],count=dens,SSE=sse))
+    return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
 }
 
 

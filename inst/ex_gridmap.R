@@ -6,6 +6,7 @@ unipoly=!duplicated(state$polygon)
 statelabel=state$state[unipoly]
 names(statelabel)=state$polygon[unipoly]
 gridmap=checkerboard(state$x,state$y,state$polygon,statelabel)
+plot(y~x,data=gridmap,pch=15,col=gridmap$label)
 library(maps)
 map("state",add=TRUE)
 
@@ -18,5 +19,9 @@ plot(y~x,data=mygrid,pch=15,col=predict(mytree,type = "class"))
 murder=crimes[,5]/crimes$population
 names(murder)=crimes$state
 newgrid=grid_cart(gridmap,murder,iteration=200)
-newgrid=grid_cart(gridmap,murder,iteration=50,animation=TRUE)
+newgrid=grid_cart(gridmap,murder,iteration=100,animation=TRUE)
+newgrid=grid_cart(gridmap,murder,iteration=50,animation=TRUE,preserve.sea=FALSE)
 text(usCapitals$centroidx,usCapitals$centroidy,usCapitals$Abbr,cex=0.8)
+plot(y~x,data=newgrid$grids,pch=15,col=factor(newgrid$grids$label,levels=levels(gridmap$label)))
+plot(newgrid$error$SSE,type='l')
+plot(newgrid$error$AE,type='l')
