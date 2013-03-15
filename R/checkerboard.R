@@ -152,7 +152,7 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,
         }
         sse[k]=sum((dens$goal-dens$crt_area)^2)
         sae[k]=sum(abs(dens$goal-dens$crt_area))
-        cat(k," step, SSE - ",sse[k],", ABS error - ",sae[k],"\n")
+        # cat(k," step, SSE - ",sse[k],", ABS error - ",sae[k],"\n")
     }
     plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
     return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
