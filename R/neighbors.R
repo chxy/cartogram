@@ -46,7 +46,7 @@ rnbr = function(distmtrx,r=1){
 ##' @param x X-coordinates of all the border.
 ##' @param y Y-coordinates of all the border.
 ##' @param corner whether the sharing of only one corner point is also defined as "neighbor".
-##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the distance from the shortest to longest.
+##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the length of shared border (from the longest to the shortest).
 ##' @export
 ##' @examples
 ##' data(usGeoInfo)

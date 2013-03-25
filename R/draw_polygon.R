@@ -69,3 +69,41 @@ square = function(xvec,yvec,rvec,border=1,col=NULL,add=TRUE,...){
         polygon(xv, yv, border = border[i], col = col)
     }
 }
+
+##' Applying the Four Color Theorem to render the polygons.
+##' 
+##' @param nbr a list of the neighbor names. The format should be the same as the value of function \code{nbrlist()}.
+##' @param start the starting region. Must be NULL or a name from \code{names(nbr)}.
+##' @return a vector of assigned colors (integers in {1,2,3,4}). The names of the vector is the same as the name of the input "nbr".
+##' @examples
+##' data(usGeoInfo)
+##' state_nbrs=nbrlist(state$state,state$x,state$y,corner=FALSE)
+##' color=fct(state_nbrs)
+##' library(maps)
+##' mapcolor=color[gsub(":.*$","",map('state',plot=F)$names)]
+##' map('state',fill=TRUE,col=mapcolor+1)
+##' 
+fct = function(nbr,start=NULL){
+    region=names(nbr)
+    stopifnot(!is.null(region), all(unlist(nbr) %in% region))
+    if (!is.null(start)) {stopifnot(start %in% region)} else {start=names(which.max(lapply(nbr,length)))}
+    
+    n=length(region)
+    res=rep(0,n)
+    names(res)=paste("polygon",1:n)
+    res[1]=1
+    names(res)[1]=start
+    for (i in 2:n){
+        candidate=setdiff(nbr[[names(res)[i-1]]],names(res))
+        if (length(candidate)==0) {candidate=setdiff(region,names(res))[1]} else {candidate=candidate[1]}
+        wrongcolor=na.omit(res[nbr[[candidate]]])
+        if (length(wrongcolor)==0) {
+            res[i]=1
+        } else {
+            candcolor=setdiff(1:4,wrongcolor)
+            if (length(candcolor)>0) {res[i]=candcolor[1]} else {warning("The starting polygon leads to a color conflict.")}
+        }
+        names(res)[i]=candidate
+    }
+    return(res)
+}
