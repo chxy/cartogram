@@ -5,7 +5,7 @@
 ##' @return A data frame of indice. For each row, the i th cell is its i th nearest neighbor.
 ##' @export
 ##' @examples
-##' data(usCapitals)
+##' data(usGeoInfo)
 ##' capital_dist=as.matrix(dist(usCapitals[,4:5]))
 ##' capital_neighbor_3=nnbr(capital_dist)
 ##' capital_neighbor_5=nnbr(capital_dist, 5)
@@ -25,7 +25,7 @@ nnbr = function(distmtrx,k=3){
 ##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the distance from the shortest to longest.
 ##' @export
 ##' @examples
-##' data(usCapitals)
+##' data(usGeoInfo)
 ##' capital_dist=as.matrix(dist(usCapitals[,4:5]))
 ##' capital_neighbor=rnbr(capital_dist)
 ##' 
@@ -45,13 +45,15 @@ rnbr = function(distmtrx,r=1){
 ##' @param region Region names.
 ##' @param x X-coordinates of all the border.
 ##' @param y Y-coordinates of all the border.
+##' @param corner whether the sharing of only one corner point is also defined as "neighbor".
 ##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the distance from the shortest to longest.
 ##' @export
 ##' @examples
-##' data(usCapitals)
+##' data(usGeoInfo)
 ##' state_nbrs=nbrlist(state$abbr,state$x,state$y)
+##' state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
 ##' 
-nbrlist = function(region,x,y){
+nbrlist = function(region,x,y,corner=TRUE){
     stopifnot(length(x)==length(region) && length(y)==length(region))
     digitx = max(min(nchar(as.character(x))),5)
     digity = max(min(nchar(as.character(y))),5)
@@ -66,7 +68,8 @@ nbrlist = function(region,x,y){
     for (i in 1:k){
         ins=censordat[censordat$r %in% uniregion[i],]
         out=censordat[! censordat$r %in% uniregion[i],]
-        res[[i]]=unique(out[out$p %in% ins$p,1])        
+        tmp=sort(table(out[out$p %in% ins$p,1]),decreasing=TRUE)
+        if (corner) {res[[i]]=names(tmp)} else {res[[i]]=names(tmp[tmp>1])}        
     }
     names(res)=uniregion
     return(res)
