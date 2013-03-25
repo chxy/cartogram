@@ -114,8 +114,10 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,
         rownames(dens)[nrow(dens)]="outer"
         dens["outer","density"]=mean(density)
         dens["outer",2]=dens["outer",3]=dens["outer",4]=ncell-sum(dens$orig_area)
-    }    
-        
+    }
+    
+    txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
+    
     for (k in 1:iteration){
         if (animation) {
             plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
@@ -150,10 +152,13 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,
                 }
             }
         }
-        sse[k]=sum((dens$goal-dens$crt_area)^2)
-        sae[k]=sum(abs(dens$goal-dens$crt_area))
+        sse[k]=sum((dens$goal-dens$crt_area)^2)/ncell
+        sae[k]=sum(abs(dens$goal-dens$crt_area))/ncell
         # cat(k," step, SSE - ",sse[k],", ABS error - ",sae[k],"\n")
+        setTxtProgressBar(txtpb, k/iteration)
     }
+    close(txtpb)
+    
     plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
     return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
 }
