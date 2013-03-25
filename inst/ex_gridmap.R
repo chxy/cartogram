@@ -5,8 +5,12 @@ palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),48,rep=F
 unipoly=!duplicated(state$polygon)
 statelabel=state$state[unipoly]
 names(statelabel)=state$polygon[unipoly]
-gridmap=checkerboard(state$x,state$y,state$polygon,statelabel)
-plot(y~x,data=gridmap,pch=15,col=gridmap$label)
+gridmap=checkerboard(state$x,state$y,state$polygon,statelabel,nbins=100,plot=FALSE)
+state_nbrs=nbrlist(state$state,state$x,state$y,corner=FALSE)
+color=fct(state_nbrs)
+plot(y~x,data=gridmap,pch=15,col=1+color[as.character(gridmap$label)])
+library(ggplot2)
+qplot(x,y,data=gridmap,geom='tile',fill=label) + theme_bw() + theme(legend.position="none")
 library(maps)
 map("state",add=TRUE)
 
