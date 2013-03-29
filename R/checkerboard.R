@@ -74,7 +74,7 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
 }
 
 
-##' Produce a Grid-based Cartogram
+##' Produce a Grid-based Cartogram by "reversi"/"game of life"
 ##' 
 ##' @param grids The output of function \code{checkerboard}.
 ##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
@@ -87,8 +87,7 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-
-grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,preserve.sea=TRUE){
+grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,preserve.sea=TRUE){
     all_labels=levels(grids$label)
     grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
@@ -116,36 +115,49 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,
         dens["outer",2]=dens["outer",3]=dens["outer",4]=ncell-sum(dens$orig_area)
     }
     
+    # sort the regions from center to edge
+    # geo_ord=order(geocenter(grids)$label_ord)
+
     txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
     for (k in 1:iteration){
         if (animation) {
-            plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
+            plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
             Sys.sleep(sleep.time)
         }
-        tmpgrid=crtgrid
-        ord=order(dens$goal-dens$crt_area)[1:sum((dens$goal-dens$crt_area)<0)]
-        for (j in ord){
-            idxj = which(crtgrid$label==rownames(dens)[j])
+        
+        # find the regions whose current area is greater than the ideal area
+        # then we can shrink them by peeling the cells
+        den_ord=order(dens$goal-dens$crt_area)[1:sum((dens$goal-dens$crt_area)<0)]
+        
+        for (j in 1:length(den_ord)){
+            tmpgrid=crtgrid
+            tmparea=dens[,3:4]
+            cell=rownames(dens)[den_ord[j]]
+            idxj = which(crtgrid$label==cell)
             for (i in idxj){
                 bottom = i-1
-                top    = i+1
-                left   = i-ygrid
-                right  = i+ygrid
-                if (i %% ygrid == 1)  bottom = NA
-                if (i %% ygrid == 0)  top    = NA
-                if (i <= ygrid)       left   = NA
-                if (i >  ncell-ygrid) right  = NA
-                fournbrs=c(bottom,top,left,right)
-                cell=tmpgrid[i,4]
-                cellnbrs=tmpgrid[fournbrs,4]
-                cond1 = all(cellnbrs[1:2]==cell,na.rm=TRUE) & all(cellnbrs[3:4]!=cell,na.rm=TRUE)
-                cond2 = all(cellnbrs[1:2]!=cell,na.rm=TRUE) & all(cellnbrs[3:4]==cell,na.rm=TRUE)
-                if (any(cellnbrs != cell, na.rm=TRUE) && (!cond1) && (!cond2)) {
-                    mynbrs=na.omit(cellnbrs[cellnbrs != cell])
-                    goal=dens[mynbrs,'goal']
-                    candidate=mynbrs[which.max(goal)]
-                    if ((!candidate %in% rownames(dens)[ord[1:j]]) && dens[cell,'crt_area']>3) {
+                top = i+1
+                left = i-ygrid
+                right = i+ygrid
+                topleft = i+1-ygrid
+                topright = i+1+ygrid
+                bottomleft = i-1-ygrid
+                bottomright = i-1+ygrid
+                if (i %% ygrid == 1)  {bottom = bottomleft = bottomright = NA}
+                if (i %% ygrid == 0)  {top    = topleft    = topright    = NA}
+                if (i <= ygrid)       {left   = bottomleft = topleft     = NA}
+                if (i >  ncell-ygrid) {right  = topright   = bottomright = NA}
+                eightnbrs = c(topleft,left,bottomleft,bottom,bottomright,right,topright,top) 
+                cellnbrs=tmpgrid[eightnbrs,4]
+                #security=sum(c(1,5,1,5,1,5,1,5)*(cellnbrs == cell),na.rm=TRUE)
+                #maxsecurity=sum(c(1,5,1,5,1,5,1,5)*(!is.na(cellnbrs)))
+                if (any(cellnbrs != cell, na.rm=TRUE) && dens[cell,'crt_area']>2) {
+                    pressure = (c(1,2,1,2,1,2,1,2)) * (dens[cellnbrs,'goal']-tmparea[cellnbrs,'crt_area'])
+                    #goal     = tapply(pressure,cellnbrs,sum,na.rm=TRUE)
+                    goal    = tapply(pressure,cellnbrs,max,na.rm=TRUE)
+                    candidate= names(goal)[which.max(goal)]
+                    if ((!cell %in% cellnbrs) || (goal[candidate]-goal[cell])>4  && (!candidate %in% rownames(dens)[den_ord[1:j]])) {
                         crtgrid[i,4]=candidate
                         dens$crt_area=table(crtgrid$label)[rownames(dens)]
                     }
@@ -159,8 +171,114 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.2,
     }
     close(txtpb)
     
-    plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels))
+    plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
     return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
+}
+
+
+##' Produce a Grid-based Cartogram by panning in rows and in columns
+##' 
+##' @param grids The output of function \code{checkerboard}.
+##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
+##' @return a data frame of coordinates and the corresponding labels
+##' @example inst/ex_gridmap.R
+##' @export
+##'
+pan_cart = function(grids,density){
+    all_labels=levels(grids$label)
+    grids$label=as.character(grids$label)
+    stopifnot(length(intersect(names(density),unique(grids$label)))>1)
+    grids=grids[grids$label %in% names(density) | is.na(grids$label),]
+    
+    plot(y~x,data=grids,pch=15,col=factor(grids$label,levels=all_labels),cex=1.7)
+    Sys.sleep(0.5)
+    
+    xgrid=sort(unique(grids$x))
+    ygrid=sort(unique(grids$y))
+    ncell=length(xgrid)*length(ygrid)
+    if (ncell!=nrow(grids)) stop("The input is not a full grid.")
+    
+    dens=data.frame(density=density,orig_area=table(grids$label)[names(density)])
+    rownames(dens)=names(density)
+    dens=dens[!is.na(dens$orig_area),]
+    dens$goal=round(dens$density*mean(dens$orig_area)/mean(dens$density))
+    dens$crt_area=dens$orig_area
+    
+    #geo_ord=geocenter(grids)$label_ord
+    
+    xcenter=round(mean(1:length(xgrid)))
+    ycenter=round(mean(1:length(ygrid)))
+    
+    newgrids1=data.frame(x=NULL,y=NULL,label=NULL)
+    for (i in 1:length(xgrid)){
+        column=grids[grids$x==xgrid[i],]
+        newgrids1=rbind(newgrids1,line_panning(column,dens,'x',ycenter))
+    }
+    newgrids1=complete(newgrids1)
+
+    plot(y~x,data=newgrids1,pch=15,col=factor(newgrids1$label,levels=all_labels),cex=1.7)
+    Sys.sleep(0.5)
+
+    newgrids2=data.frame(x=NULL,y=NULL,label=NULL)
+    for (i in unique(newgrids1$y)){
+        rowline=newgrids1[newgrids1$y==i,]
+        newgrids2=rbind(newgrids2,line_panning(rowline,dens,'y',xcenter))
+    }
+    newgrids2=complete(newgrids2)
+    newncell=sum(!is.na(newgrids2$label))
+    
+    dens$crt_area=table(newgrids2$label)[rownames(dens)]
+    err=c(SSE=sum((dens$goal-dens$crt_area)^2)/newncell,
+          AE=sum(abs(dens$goal-dens$crt_area))/newncell)
+    plot(y~x,data=newgrids2,pch=15,col=factor(newgrids2$label,levels=all_labels),cex=1.7)
+    return(list(grids=newgrids2,count=dens,error=err))
+}
+
+
+##' Stretch or squeeze a sequence of cells by a target density
+##' 
+##' @param df a data frame with column x(the x coordinate), y(y coordinate), and label(which region it belongs to). The data point should be in a line in either x or y direction.
+##' @param dnsty a data frame with columns goal(the target number of cells) and orig_area(the original number of cells). The rownames must contain all the labels in \code{df}.
+##' @param by If by='x' then the code will stretch the cells in y/vertical direction.
+##' If by='y' then the code will stretch the cells in x/horizontal direction.
+##' @param center the global center of y if by='x' and global center of x if by='y'. "Global" center means not the center of the input \code{df}, but the center of the map.
+##' @return a data frame of column x(the new x coordinate), y(the new y coordinate), and label. The number of rows of the output might be different from the input \code{df}.
+##' 
+line_panning=function(df,dnsty,by,center){
+    df$label[is.na(df$label)]='NA'
+    jump=c(1,which(diff(as.integer(as.factor(df$label)))!=0)+1)
+    unilabel=df$label[jump]
+    labellen=c(diff(jump),nrow(df)+1-max(jump))
+    strength=sqrt(dnsty[unilabel,'goal'] / dnsty[unilabel,'orig_area'])
+    strength[is.na(strength)]=1
+    newlength=ceiling(labellen * strength)
+    newcolumn=rep(unilabel,newlength)
+    newcolumn[newcolumn=='NA']=NA
+    
+    centeridx=sum(jump<=center)
+    newcenter=round((center-jump[centeridx])*strength[centeridx])+ifelse(centeridx==1,0,sum(newlength[1:(centeridx-1)]))
+    
+    if (by=='x') return(data.frame(x=df$x[1],y=(1:length(newcolumn))-newcenter,label=newcolumn,stringsAsFactors=FALSE))
+    if (by=='y') return(data.frame(x=(1:length(newcolumn))-newcenter,y=df$y[1],label=newcolumn,stringsAsFactors=FALSE))
+}
+
+
+##' Complete the lattice if there are missings.
+##' 
+##' If nrow(df)!=length(unique(x))*length(unique(y)), then NA's will be filled in to make a full lattice.
+##' @param df a data frame with column x(the x coordinate), y(y coordinate), and label(which region it belongs to). The data point should be in a line in either x or y direction.
+##' @return a data frame of column x(the new x coordinate), y(the new y coordinate), and label.
+##' 
+complete=function(df){
+    x=sort(unique(df$x))
+    y=sort(unique(df$y))
+    res=matrix(NA,nrow=length(y),ncol=length(x))
+    rownames(res)=y; colnames(res)=x
+    for (j in 1:ncol(res)){
+        tmp=df[df$x==x[j],]
+        res[as.character(tmp$y),j]=tmp$label
+    }
+    data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=as.vector(res),stringsAsFactors=FALSE)
 }
 
 
@@ -182,4 +300,34 @@ pointinsquares = function(p,sqxrange,sqyrange,sqname=rownames(sqxrange)){
         b[1:length(a)]=sqname[a]
     }
     return(c(length(a),b))
+}
+
+##' Find the geographic center of a map
+##' 
+##' @param grids output of function \code{checkerboard}.
+##' @return the order of regions from the center to the edge.
+##' @export
+##' @examples
+##' geocenter(gridmap)
+geocenter = function(grids){
+    grids$label=as.character(grids$label)
+    rownames(grids)=paste(grids$x,grids$y)
+    
+    grids=grids[!is.na(grids$poly),]
+    xmean=mean(grids$x); xstd=sd(grids$x)
+    ymean=mean(grids$y); ystd=sd(grids$y)
+    
+    grids$weight=((grids$x-xmean)/xstd)^2+((grids$y-ymean)/ystd)^2
+    grids$order=rank(grids$weight,ties.method="first")
+    
+    ord=order(grids$order)
+    poly=unique(grids[ord,'poly'])
+    label=unique(grids[ord,'label'])
+    
+    res=list(poly_ord=1:length(poly),label_ord=1:length(label))
+    names(res$poly_ord)=poly
+    names(res$label_ord)=label
+    res$poly_ord=res$poly_ord[order(poly)]
+    res$label_ord=res$label_ord[order(label)]
+    res
 }

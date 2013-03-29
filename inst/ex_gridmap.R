@@ -5,10 +5,10 @@ palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),48,rep=F
 unipoly=!duplicated(state$polygon)
 statelabel=state$state[unipoly]
 names(statelabel)=state$polygon[unipoly]
-gridmap=checkerboard(state$x,state$y,state$polygon,statelabel,nbins=100,plot=FALSE)
+gridmap=checkerboard(state$x,state$y,state$polygon,statelabel,nbins=50,plot=FALSE)
 state_nbrs=nbrlist(state$state,state$x,state$y,corner=FALSE)
 color=fct(state_nbrs)
-plot(y~x,data=gridmap,pch=15,col=1+color[as.character(gridmap$label)])
+plot(y~x,data=gridmap,pch=15,col=1+color[as.character(gridmap$label)],cex=1.7)
 library(ggplot2)
 qplot(x,y,data=gridmap,geom='tile',fill=label) + theme_bw() + theme(legend.position="none")
 library(maps)
@@ -29,3 +29,6 @@ text(usCapitals$centroidx,usCapitals$centroidy,usCapitals$Abbr,cex=0.8)
 plot(y~x,data=newgrid$grids,pch=15,col=factor(newgrid$grids$label,levels=levels(gridmap$label)))
 plot(newgrid$error$SSE,type='l')
 plot(newgrid$error$AE,type='l')
+
+newgrid2=pan_cart(gridmap,murder)
+plot(y~x,data=newgrid2,pch=15,col=newgrid2$label)
