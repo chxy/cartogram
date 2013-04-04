@@ -6,21 +6,20 @@
 ##' @param label A vector of the displayed names for polygons. One label could serve several polygons. Must be unique and \code{names(label)} must contain all the unique input \code{name}.
 ##' @param binwidth A vector of length 2 indicating the binwidths in x and y direction. Default to be 1/50 of the range.
 ##' @param plot Whether to plot the checkerboard map.
+##' @param pal palette. The input for the argument "col" in \code{image()}.
 ##' @return A data frame of four columns: x and y coordinates of the grids, the name and the label that a grid point belongs to.
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
 checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
                         binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50),
-                        plot=TRUE){
+                        plot=TRUE, pal=NULL){
     nborder=length(name)
     stopifnot(nborder==length(xborder),nborder==length(yborder))
     if (is.null(label)) {label=sort(unique(name)); names(label)=label} else {
         region=unique(name)
         stopifnot(length(label)>=length(region), all(region %in% names(label)))
     }    
-    if (length(density)==1) {density=rep(1,length(region)); names(density)=region}
-    stopifnot(length(density)>=length(region),all(region %in% names(density)))
     if (!is.null(nbins)) {
         nbins=round(nbins)
         stopifnot(nbins>10)
@@ -69,7 +68,17 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     close(txtpb)
     
     grids$label = factor(label[grids$poly],levels=unique(label))
-    if (plot) plot(y~x,data=grids,pch=15,col=grids$label)
+    
+    if (plot) {
+        # plot(y~x,data=grids,pch=15,col=grids$label)
+        if (is.null(pal)) {
+            set.seed(1000)
+            pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(unique(label)),rep=FALSE))
+        }
+        grids=grids[order(grids$y,grids$x),]
+        image(xgrid,ygrid,matrix(as.integer(grids$label),nrow=length(xgrid),ncol=length(ygrid)),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    } 
+    
     return(grids[,c(1:3,5)])
 }
 
@@ -180,29 +189,35 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
 ##' 
 ##' @param grids The output of function \code{checkerboard}.
 ##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
-##' @return a data frame of coordinates and the corresponding labels
+##' @param pal palette. The input for the argument "col" in \code{image()}.
+##' @return a data frame of coordinates and the corresponding labels, as well as the errors.
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-pan_cart = function(grids,density){
-    all_labels=levels(grids$label)
+pan_cart = function(grids,density,pal=NULL){
+    all_labels=if (is.factor(grids$label)) levels(grids$label) else unique(grids$label)
     grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
     grids=grids[grids$label %in% names(density) | is.na(grids$label),]
-    
-    plot(y~x,data=grids,pch=15,col=factor(grids$label,levels=all_labels),cex=1.7)
-    Sys.sleep(0.5)
     
     xgrid=sort(unique(grids$x))
     ygrid=sort(unique(grids$y))
     ncell=length(xgrid)*length(ygrid)
     if (ncell!=nrow(grids)) stop("The input is not a full grid.")
     
+    #plot(y~x,data=grids,pch=15,col=factor(grids$label,levels=all_labels),cex=1.7)
+    if (is.null(pal)) {
+        set.seed(1000)
+        pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(all_labels),rep=FALSE))
+    }
+    x11(width=4,height=4)
+    grids=grids[order(grids$y,grids$x),]
+    image(xgrid,ygrid,matrix(as.integer(factor(grids$label,levels=all_labels)),nrow=length(xgrid),ncol=length(ygrid)),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    
     dens=data.frame(density=density,orig_area=table(grids$label)[names(density)])
     rownames(dens)=names(density)
     dens=dens[!is.na(dens$orig_area),]
     dens$goal=round(dens$density*mean(dens$orig_area)/mean(dens$density))
-    dens$crt_area=dens$orig_area
     
     #geo_ord=geocenter(grids)$label_ord
     
@@ -215,8 +230,12 @@ pan_cart = function(grids,density){
         newgrids1=rbind(newgrids1,line_panning(column,dens,'x',ycenter))
     }
     newgrids1=complete(newgrids1)
+    dens$mid_area=table(newgrids1$label)[rownames(dens)]
 
-    plot(y~x,data=newgrids1,pch=15,col=factor(newgrids1$label,levels=all_labels),cex=1.7)
+    #plot(y~x,data=newgrids1,pch=15,col=factor(newgrids1$label,levels=all_labels),cex=1.7)
+    x11(width=4,height=4)
+    newgrids1=newgrids1[order(newgrids1$y,newgrids1$x),]
+    image(unique(newgrids1$x),unique(newgrids1$y),matrix(as.integer(factor(newgrids1$label,levels=all_labels)),nrow=length(unique(newgrids1$x)),ncol=length(unique(newgrids1$y))),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     Sys.sleep(0.5)
 
     newgrids2=data.frame(x=NULL,y=NULL,label=NULL)
@@ -227,11 +246,14 @@ pan_cart = function(grids,density){
     newgrids2=complete(newgrids2)
     newncell=sum(!is.na(newgrids2$label))
     
-    dens$crt_area=table(newgrids2$label)[rownames(dens)]
-    err=c(SSE=sum((dens$goal-dens$crt_area)^2)/newncell,
-          AE=sum(abs(dens$goal-dens$crt_area))/newncell)
-    plot(y~x,data=newgrids2,pch=15,col=factor(newgrids2$label,levels=all_labels),cex=1.7)
-    return(list(grids=newgrids2,count=dens,error=err))
+    dens$end_area=table(newgrids2$label)[rownames(dens)]
+    err=c(SSE=sum((dens$goal-dens$end_area)^2)/newncell,
+          AE=sum(abs(dens$goal-dens$end_area))/newncell)
+    #plot(y~x,data=newgrids2,pch=15,col=factor(newgrids2$label,levels=all_labels),cex=1.7)
+    x11(width=4,height=4)
+    newgrids2=newgrids2[order(newgrids2$y,newgrids2$x),]
+    image(unique(newgrids2$x),unique(newgrids2$y),matrix(as.integer(factor(newgrids2$label,levels=all_labels)),nrow=length(unique(newgrids2$x)),ncol=length(unique(newgrids2$y))),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    return(list(grids=newgrids2,count=dens[,c(1,3,2,4,5)],error=err))
 }
 
 
