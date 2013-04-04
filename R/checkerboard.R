@@ -101,6 +101,7 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
     grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
     grids=grids[grids$label %in% names(density) | is.na(grids$label),]
+    grids=grids[order(grids$x,grids$y),]
     
     xgrid=length(unique(grids$x))
     ygrid=length(unique(grids$y))
@@ -126,12 +127,15 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
     
     # sort the regions from center to edge
     # geo_ord=order(geocenter(grids)$label_ord)
+    set.seed(1000)
+    pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(all_labels),rep=FALSE))
 
     txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
     for (k in 1:iteration){
         if (animation) {
-            plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
+            #plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
+            image(unique(crtgrid$x),unique(crtgrid$y),matrix(as.integer(factor(crtgrid$label,levels=all_labels)),nrow=length(unique(crtgrid$x)),ncol=length(unique(crtgrid$y)),byrow=TRUE),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
             Sys.sleep(sleep.time)
         }
         
@@ -180,7 +184,8 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
     }
     close(txtpb)
     
-    plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
+    #plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
+    image(unique(crtgrid$x),unique(crtgrid$y),matrix(as.integer(factor(crtgrid$label,levels=all_labels)),nrow=length(unique(crtgrid$x)),ncol=length(unique(crtgrid$y)),byrow=TRUE),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
 }
 
@@ -304,26 +309,6 @@ complete=function(df){
 }
 
 
-##' Whether a point locates in the squares.
-##' 
-##' @param p Location of the point. Should be a vector of length 2.
-##' @param sqxrange A matrix with 2 columns. The first column is the lower bound of the squares' x-coordinates, and the second column is the upper bound of the x-coordinates.
-##' @param sqyrange A matrix with 2 columns. The first column is the lower bound of the squares' y-coordinates, and the second column is the upper bound of the y-coordinates.
-##' @param sqname A vector of the square names. Default to be the rownames of sqxrange.
-##' @export
-##' @examples
-##' xrange = yrange = matrix(c(1:5,4:8),ncol=2)
-##' pointinsquares(c(3.5,3.5),xrange,yrange,LETTERS[1:5])
-##' 
-pointinsquares = function(p,sqxrange,sqyrange,sqname=rownames(sqxrange)){
-    a=which(p[1]>=sqxrange[,1] & p[1]<=sqxrange[,2] & p[2]>=sqyrange[,1] & p[2]<=sqyrange[,2])
-    b=rep(NA,length(sqname))
-    if (length(a)>0) {
-        b[1:length(a)]=sqname[a]
-    }
-    return(c(length(a),b))
-}
-
 ##' Find the geographic center of a map
 ##' 
 ##' @param grids output of function \code{checkerboard}.
@@ -352,4 +337,34 @@ geocenter = function(grids){
     res$poly_ord=res$poly_ord[order(poly)]
     res$label_ord=res$label_ord[order(label)]
     res
+}
+
+
+##' Example simulator
+##' 
+##' @param nr number of rows
+##' @param nc number of columns
+##' @param g number of groups
+##' @param seed seeds for reproduce the example
+##' @return a data frame of columns: x(row coord), y(column coord), m(group), 'label'(group name), 'd'(density).
+##' @export
+##' @examples
+##' grid.sim()
+##' grid.sim(16,12,10)
+##' 
+grid.sim = function(nr=15,nc=15,g=12,seed=100){
+    set.seed(seed)
+    p=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),g,rep=FALSE))
+    a=matrix(rpois(nr*nc,2),nrow=nr,ncol=nc)
+    b=cbind(expand.grid(1:nr,1:nc),as.vector(a))
+    colnames(b)=c('x','y','v')
+    xmean=mean(b$x); xstd=sd(b$x)
+    ymean=mean(b$y); ystd=sd(b$y)
+    b$w=((b$x-xmean)/xstd)^2+((b$y-ymean)/ystd)^2
+    b$m=kmeans(b[,c('x','y','v','x','y','w')],g,iter.max=100)$cluster
+    b$d=round(5*sin(exp(b$m))+10,3)
+    b$label=as.factor(LETTERS[b$m])
+    r=matrix(b$m,nrow=nr,ncol=nc)
+    image(1:nr,1:nc,r,col=p,xlab='',ylab='',xaxt='n',yaxt='n',frame=F,asp=nc/nr)
+    b[,c('x','y','m','label','d')]
 }

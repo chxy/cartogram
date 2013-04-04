@@ -41,28 +41,15 @@ image(unique(newgrid2$grids$x),unique(newgrid2$grids$y),matrix(tmplabel,nrow=len
 
 ################################################################################
 
-grid.sim = function(nr=15,nc=15,g=12,seed=100){
-    set.seed(seed)
-    p=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),g,rep=FALSE))
-    a=matrix(rpois(nr*nc,2),nrow=nr,ncol=nc)
-    b=cbind(expand.grid(1:nr,1:nc),as.vector(a))
-    colnames(b)=c('x','y','v')
-    xmean=mean(b$x); xstd=sd(b$x)
-    ymean=mean(b$y); ystd=sd(b$y)
-    b$w=((b$x-xmean)/xstd)^2+((b$y-ymean)/ystd)^2
-    b$m=kmeans(b[,c('x','y','v','x','y','w')],g,iter.max=100)$cluster
-    b$d=round(5*sin(exp(b$m))+10,3)
-    b$label=as.factor(LETTERS[b$m])
-    r=matrix(b$m,nrow=nr,ncol=nc)
-    image(1:nr,1:nc,r,col=p,xlab='',ylab='',xaxt='n',yaxt='n',frame=F,asp=nc/nr)
-    b[,c('x','y','m','label','d')]
-}
-
 s=grid.sim(16,12,10)
-
 d1=s[!duplicated(s[,4:5]),4:5]
 d=d1$d
 names(d)=d1$label
 
-grid1=grid_cart(s[,c(1,2,4,4)],d,iteration=30,animation=TRUE)
+grid1=grid_cart(s[,1:4],d,iteration=20,animation=TRUE,sleep.time=1)
+grid1$count
+plot(grid1$error$SSE,type='l')
+plot(grid1$error$AE,type='l')
+
 grid2=pan_cart(s[,c(1,2,4,4)],d)
+grid2$count
