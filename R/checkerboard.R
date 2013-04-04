@@ -39,6 +39,11 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     grids[,3:4]=query[,2:1]
     colnames(grids)[3:4]=c('poly','edge')
     
+    if (is.null(pal)) {
+        set.seed(1000)
+        pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(unique(label)),rep=FALSE))
+    }
+    
     txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
     library(sp)
@@ -71,10 +76,6 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     
     if (plot) {
         # plot(y~x,data=grids,pch=15,col=grids$label)
-        if (is.null(pal)) {
-            set.seed(1000)
-            pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(unique(label)),rep=FALSE))
-        }
         grids=grids[order(grids$y,grids$x),]
         image(xgrid,ygrid,matrix(as.integer(grids$label),nrow=length(xgrid),ncol=length(ygrid)),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     } 
@@ -299,13 +300,15 @@ line_panning=function(df,dnsty,by,center){
 complete=function(df){
     x=sort(unique(df$x))
     y=sort(unique(df$y))
+    all_labels=if (is.factor(df$label)) levels(df$label) else sort(unique(df$label))
+    df$label=as.integer(factor(df$label,levels=all_labels))
     res=matrix(NA,nrow=length(y),ncol=length(x))
     rownames(res)=y; colnames(res)=x
     for (j in 1:ncol(res)){
         tmp=df[df$x==x[j],]
         res[as.character(tmp$y),j]=tmp$label
     }
-    data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=as.vector(res),stringsAsFactors=FALSE)
+    data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=all_labels[as.vector(res)],stringsAsFactors=TRUE)
 }
 
 
