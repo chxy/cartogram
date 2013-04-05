@@ -235,13 +235,13 @@ pan_cart = function(grids,density,pal=NULL){
         column=grids[grids$x==xgrid[i],]
         newgrids1=rbind(newgrids1,line_panning(column,dens,'x',ycenter))
     }
-    newgrids1=complete(newgrids1)
+    image1=complete.image(newgrids1)
+    newgrids1=image1$df
     dens$mid_area=table(newgrids1$label)[rownames(dens)]
 
     #plot(y~x,data=newgrids1,pch=15,col=factor(newgrids1$label,levels=all_labels),cex=1.7)
     x11(width=4,height=4)
-    newgrids1=newgrids1[order(newgrids1$y,newgrids1$x),]
-    image(unique(newgrids1$x),unique(newgrids1$y),matrix(as.integer(factor(newgrids1$label,levels=all_labels)),nrow=length(unique(newgrids1$x)),ncol=length(unique(newgrids1$y))),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    image(image1$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     Sys.sleep(0.5)
 
     newgrids2=data.frame(x=NULL,y=NULL,label=NULL)
@@ -249,7 +249,8 @@ pan_cart = function(grids,density,pal=NULL){
         rowline=newgrids1[newgrids1$y==i,]
         newgrids2=rbind(newgrids2,line_panning(rowline,dens,'y',xcenter))
     }
-    newgrids2=complete(newgrids2)
+    image2=complete.image(newgrids2)
+    newgrids2=image2$df
     newncell=sum(!is.na(newgrids2$label))
     
     dens$end_area=table(newgrids2$label)[rownames(dens)]
@@ -257,8 +258,7 @@ pan_cart = function(grids,density,pal=NULL){
           AE=sum(abs(dens$goal-dens$end_area))/newncell)
     #plot(y~x,data=newgrids2,pch=15,col=factor(newgrids2$label,levels=all_labels),cex=1.7)
     x11(width=4,height=4)
-    newgrids2=newgrids2[order(newgrids2$y,newgrids2$x),]
-    image(unique(newgrids2$x),unique(newgrids2$y),matrix(as.integer(factor(newgrids2$label,levels=all_labels)),nrow=length(unique(newgrids2$x)),ncol=length(unique(newgrids2$y))),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    image(image2$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     return(list(grids=newgrids2,count=dens[,c(1,3,2,4,5)],error=err))
 }
 
@@ -297,7 +297,8 @@ line_panning=function(df,dnsty,by,center){
 ##' @param df a data frame with column x(the x coordinate), y(y coordinate), and label(which region it belongs to). The data point should be in a line in either x or y direction.
 ##' @return a data frame of column x(the new x coordinate), y(the new y coordinate), and label.
 ##' 
-complete=function(df){
+complete.image=function(df){
+    names(df)[which(!names(df)%in%c('x','y'))]='label'
     x=sort(unique(df$x))
     y=sort(unique(df$y))
     all_labels=if (is.factor(df$label)) levels(df$label) else sort(unique(df$label))
@@ -308,7 +309,7 @@ complete=function(df){
         tmp=df[df$x==x[j],]
         res[as.character(tmp$y),j]=tmp$label
     }
-    data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=all_labels[as.vector(res)],stringsAsFactors=TRUE)
+    list(x=x,y=y,matrix=t(res),df=data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=all_labels[as.vector(res)],stringsAsFactors=TRUE))
 }
 
 

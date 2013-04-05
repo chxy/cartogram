@@ -20,9 +20,13 @@ res$state=gsub(":.*$","",res$polygon)
 unipoly=!duplicated(res$polygon)
 statelabel=res$state[unipoly]
 names(statelabel)=res$polygon[unipoly]
-gridmap=checkerboard(res$x,res$y,res$polygon,statelabel,nbins=100,plot=TRUE)
+bin=100
+gridmap=checkerboard(res$x,res$y,res$polygon,statelabel,nbins=bin,plot=TRUE)
 
-grid1=gridmap[!is.na(gridmap$poly),c(1,2,4)]
+grid1=gridmap[order(gridmap$y,gridmap$x),]
+grid1$x=rep(1:bin,bin)
+grid1$y=rep(1:bin,each=bin)
+grid1=grid1[!is.na(grid1$poly),c(1,2,4)]
 usC=usCapitals[,1:2]
 rownames(usC)=tolower(usC$State)
 grid1$label=usC[as.character(grid1$label),'Abbr']
@@ -44,7 +48,8 @@ dist.ratio=2
 shared.border=NULL
 grid2=grid1
 
-for (s in 1:100){
+for (s in 1:30){
+    grid2=grid2[!is.na(grid2$label),]
     crtDist=as.matrix(dist(crtloc))
     frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
     
@@ -84,9 +89,10 @@ for (s in 1:100){
     frc$yforce=frc$yrepel+frc$yattract
     crtloc=crtloc+frc[,8:7]
     
-    grid2$x=grid2$x+frc[grid2$label,'xforce']
-    grid2$y=grid2$y+frc[grid2$label,'yforce']
-    grid2=complete(grid2)
-    image(unique(grid2$x),unique(grid2$y),matrix(as.integer(factor(grid2$label,levels=levels(grid1$label))),nrow=length(unique(grid2$x)),ncol=length(unique(grid2$y)),byrow=T),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    grid2$x=grid2$x+round(frc[grid2$label,'xforce'])
+    grid2$y=grid2$y+round(frc[grid2$label,'yforce'])
+    image2=complete.image(grid2)
+    grid2=image2$df
+    image(image2$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     Sys.sleep(0.2)
 }
