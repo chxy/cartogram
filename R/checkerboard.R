@@ -273,6 +273,7 @@ pan_cart = function(grids,density,pal=NULL){
 ##' @return a data frame of column x(the new x coordinate), y(the new y coordinate), and label. The number of rows of the output might be different from the input \code{df}.
 ##' 
 line_panning=function(df,dnsty,by,center){
+    df$label=as.character(df$label)
     df$label[is.na(df$label)]='NA'
     jump=c(1,which(diff(as.integer(as.factor(df$label)))!=0)+1)
     unilabel=df$label[jump]
@@ -295,9 +296,10 @@ line_panning=function(df,dnsty,by,center){
 ##' 
 ##' If nrow(df)!=length(unique(x))*length(unique(y)), then NA's will be filled in to make a full lattice.
 ##' @param df a data frame with column x(the x coordinate), y(y coordinate), and label(which region it belongs to). The data point should be in a line in either x or y direction.
+##' @param omit.sea logical. If TRUE then the NA rows or columns around the map will be removed. 
 ##' @return a data frame of column x(the new x coordinate), y(the new y coordinate), and label.
 ##' 
-complete.image=function(df){
+complete.image=function(df,omit.sea=TRUE){
     names(df)[which(!names(df)%in%c('x','y'))]='label'
     x=sort(unique(df$x))
     y=sort(unique(df$y))
@@ -308,6 +310,13 @@ complete.image=function(df){
     for (j in 1:ncol(res)){
         tmp=df[df$x==x[j],]
         res[as.character(tmp$y),j]=tmp$label
+    }
+    if (omit.sea) {
+        NArows=which(rowMeans(is.na(res))!=1)
+        NAcols=which(colMeans(is.na(res))!=1)
+        res=res[NArows[1]:NArows[length(NArows)],NAcols[1]:NAcols[length(NAcols)]]
+        x=as.numeric(colnames(res))
+        y=as.numeric(rownames(res))
     }
     list(x=x,y=y,matrix=t(res),df=data.frame(x=rep(x,each=length(y)),y=rep(y,length(x)),label=all_labels[as.vector(res)],stringsAsFactors=TRUE))
 }
