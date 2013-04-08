@@ -94,5 +94,6 @@ for (s in 1:30){
     image2=complete.image(grid2)
     grid2=image2$df
     image(image2$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    points(crtloc$x/bin,crtloc$y/bin,pch=21,cex=rad$r)
     Sys.sleep(0.2)
 }
