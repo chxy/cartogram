@@ -97,3 +97,13 @@ for (s in 1:30){
     points(crtloc$x/bin,crtloc$y/bin,pch=21,cex=rad$r)
     Sys.sleep(0.2)
 }
+
+################################################################################
+# How to measure the proximity of two sequences of cells
+# 1. Contigency table or mean(a!=b)
+# 2. diff lengths of the sequences -- ignore or place a little panelty?
+# 3. neighors -- 1 neighbor or 3 neighbors? Assign some weights to the diagonal neighbors?
+# How to find the optimal location?
+# 1. shift one sequence by one cell at a time, from top to bottom of the other sequence
+# 2. completely unmatched at the division line?
+# 3. ties of the measurement?
