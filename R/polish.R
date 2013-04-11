@@ -131,8 +131,15 @@ panning=function(df,dnsty,by,center){
     unilabel=df$label[jump]
     labellen=c(diff(jump),nrow(df)+1-max(jump))
     strength=sqrt(dnsty[unilabel,'goal'] / dnsty[unilabel,'orig_area'])
-    strength[is.na(strength)]=1
-    newlength=ceiling(labellen * strength)
+    ratiolen=labellen / dnsty[unilabel,'orig_area']
+    ratiolen[is.na(ratiolen)]=.3
+    naidx=which(is.na(strength))
+    for (i in naidx){
+        strength[i]=min(c(1,strength[i-1],strength[i+1]),na.rm=TRUE)
+    }
+    newlength=labellen*strength
+    newlength[ratiolen>=.3]=floor(newlength[ratiolen>=.3])
+    newlength[ratiolen<.3]=ceiling(newlength[ratiolen<.3])
     newcolumn=rep(unilabel,newlength)
     newcolumn[newcolumn=='NA']=NA
     
@@ -187,6 +194,7 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' @param a a numeric vector
 ##' @param b a numeric vector
 ##' @param a1loc the global location of the first element of "a". 
+##' @param na.loose logical
 ##' @return the matched vectors and their position
 ##' @examples
 ##' local.matching(1:5,1:5,3)
@@ -194,7 +202,7 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' local.matching(rep(1,7),rep(1,3),-3)
 ##' local.matching(rep(1,7),2:5,1)
 ##' 
-local.matching=function(a,b,a1loc){
+local.matching=function(a,b,a1loc,na.loose=TRUE){
     n1=length(a)
     n2=length(b)
     s=rep(NA,n1+n2-1)

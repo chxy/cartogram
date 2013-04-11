@@ -28,6 +28,7 @@ image(rfimage$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
 murder=crimes[,5]/crimes$population
 names(murder)=crimes$state
 
+x11()
 newgrid=grid_cart(gridmap,murder,iteration=200)
 newgrid=grid_cart(gridmap,murder,iteration=100,animation=TRUE)
 newgrid=grid_cart(gridmap,murder,iteration=50,animation=TRUE,preserve.sea=FALSE)
@@ -47,6 +48,7 @@ d1=s[!duplicated(s[,4:5]),4:5]
 d=d1$d
 names(d)=d1$label
 
+x11()
 grid1=grid_cart(s[,1:4],d,iteration=20,animation=TRUE,sleep.time=1)
 grid1$count
 plot(grid1$error$SSE,type='l')
