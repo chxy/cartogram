@@ -86,6 +86,8 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
 
 ##' Produce a Grid-based Cartogram by "reversi"/"game of life"
 ##' 
+##' The iteration will stop if the SSE does not change for the latest 5 steps.
+##' 
 ##' @param grids The output of function \code{checkerboard}.
 ##' @param density A vector of the variable of interest. \code{names(density)} should match \code{grids$label}.
 ##' @param iteration The number of iterations.
@@ -133,10 +135,12 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
 
     txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
+    par(mfrow=c(1,2))
     for (k in 1:iteration){
         if (animation) {
             #plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
             image(unique(crtgrid$x),unique(crtgrid$y),matrix(as.integer(factor(crtgrid$label,levels=all_labels)),nrow=length(unique(crtgrid$x)),ncol=length(unique(crtgrid$y)),byrow=TRUE),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+            plot(1:iteration,sse,type='o',ylim=c(0,0.3))
             Sys.sleep(sleep.time)
         }
         
@@ -180,6 +184,7 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
         }
         sse[k]=sum((dens$goal-dens$crt_area)^2)/ncell
         sae[k]=sum(abs(dens$goal-dens$crt_area))/ncell
+        if (all(sse[k-(0:min(4,k-1))]==sse[k])) k=iteration
         # cat(k," step, SSE - ",sse[k],", ABS error - ",sae[k],"\n")
         setTxtProgressBar(txtpb, k/iteration)
     }
@@ -187,6 +192,7 @@ grid_cart = function(grids,density,iteration=100,animation=FALSE,sleep.time=0.1,
     
     #plot(y~x,data=crtgrid,pch=15,col=factor(crtgrid$label,levels=all_labels),cex=1.7)
     image(unique(crtgrid$x),unique(crtgrid$y),matrix(as.integer(factor(crtgrid$label,levels=all_labels)),nrow=length(unique(crtgrid$x)),ncol=length(unique(crtgrid$y)),byrow=TRUE),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
+    plot(1:iteration,sse,type='o')
     return(list(grids=crtgrid[,c(1,2,4)],count=dens,error=data.frame(SSE=sse,AE=sae)))
 }
 
