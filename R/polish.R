@@ -235,8 +235,8 @@ global.matching=function(df,by){
     stopifnot(by %in% c('x','y'), c('x','y') %in% names(df))
     names(df)[which(!names(df)%in%c('x','y'))]='label'
     df=df[order(df$x,df$y),]
-    x=unique(df$x)
-    y=unique(df$y)
+    x=sort(unique(df$x))
+    y=sort(unique(df$y))
     res=df
     if (by=='x'){  # then column 'x' and 'label' will not change 
         for (i in 2:length(x)){
