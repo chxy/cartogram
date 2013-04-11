@@ -27,6 +27,7 @@ image(rfimage$matrix,col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
 
 murder=crimes[,5]/crimes$population
 names(murder)=crimes$state
+
 newgrid=grid_cart(gridmap,murder,iteration=200)
 newgrid=grid_cart(gridmap,murder,iteration=100,animation=TRUE)
 newgrid=grid_cart(gridmap,murder,iteration=50,animation=TRUE,preserve.sea=FALSE)
@@ -35,7 +36,7 @@ plot(y~x,data=newgrid$grids,pch=15,col=factor(newgrid$grids$label,levels=levels(
 plot(newgrid$error$SSE,type='l')
 plot(newgrid$error$AE,type='l')
 
-newgrid2=pan_cart(gridmap,murder)
+newgrid2=polish_cart(gridmap,murder)
 tmplabel=as.integer(as.character(factor(newgrid2$grids$label,levels=statelabel,labels=color[statelabel])))
 image(unique(newgrid2$grids$x),unique(newgrid2$grids$y),matrix(tmplabel,nrow=length(unique(newgrid2$grids$x)),ncol=length(unique(newgrid2$grids$y))),col=rainbow(5),xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
 
@@ -51,5 +52,5 @@ grid1$count
 plot(grid1$error$SSE,type='l')
 plot(grid1$error$AE,type='l')
 
-grid2=pan_cart(s[,c(1,2,4,4)],d)
+grid2=polish_cart(s[,c(1,2,4,4)],d)
 grid2$count

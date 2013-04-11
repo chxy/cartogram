@@ -97,32 +97,3 @@ for (s in 1:30){
     points(crtloc$x/bin,crtloc$y/bin,pch=21,cex=rad$r)
     Sys.sleep(0.2)
 }
-
-################################################################################
-
-##' Measure the proximity of two sequences of cells
-##' 
-##' 1. Contigency table or mean(a!=b)
-##' 2. diff lengths of the sequences -- ignore or place a little panelty?
-##' 3. neighors -- 1 neighbor or 3 neighbors? Assign some weights to the diagonal neighbors?
-##' How to find the optimal location?
-##' 1. shift one sequence by one cell at a time, from top to bottom of the other sequence
-##' 2. completely unmatched at the division line?
-##' 3. ties of the measurement?
-##' 
-##' @param a a vector
-##' @param b a vector of the same length with a
-##' @param na.panelty between 0 and 1.
-##' @param diag.wt between 0 and 1.
-##' @return the score of similarity
-##'
-similarity=function(a,b,na.panelty=0,diag.wt=0){
-    n=length(a)
-    stopifnot(n==length(b))
-    r1=sum(a==b,na.rm=TRUE)
-    r1top=sum(a[-1]==b[1:(n-1)],na.rm=TRUE)
-    r1bot=sum(a[1:(n-1)]==b[-1],na.rm=TRUE)
-    r2=sum(is.na(a+b))
-    r3=n-r1-r2
-    (r1+(r1top+r1bot)*diag.wt-r2*na.panelty-r3)/n
-}
