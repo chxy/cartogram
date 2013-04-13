@@ -190,11 +190,18 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' 3. ties of the measurement? Add weights to the diagonal neighbors and
 ##' add panelty to the NA's, then measure the similarity again. If ties still
 ##' exist, then use the closest tie to the center of the two sequences.
+##' 4. To match two sequences - "1,1,NA,NA,2,3,3" and "1,1,2,2,3,3,3", 
+##' the standard result 
+##' 1 1 NA NA 2 3 3
+##' 1 1  2  2 3 3 3
+##' is worse than that with a loose rule -
+##' 1 1 NA 2 3 3 NA
+##' 1 1  2 2 3 3  3 
 ##' 
 ##' @param a a numeric vector
 ##' @param b a numeric vector
 ##' @param a1loc the global location of the first element of "a". 
-##' @param na.loose logical
+##' @param na.loose logical. Whether to allow the number of NA's within a sequence changes. 
 ##' @return the matched vectors and their position
 ##' @examples
 ##' local.matching(1:5,1:5,3)
