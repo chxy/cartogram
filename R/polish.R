@@ -230,9 +230,52 @@ local.matching=function(a,b,a1loc,na.loose=TRUE){
         opti=opti[which.min(abs(opti-(n1+n2)/2))]
     }
     res.df=data.frame(a=c(rep(NA,max(0,opti-n1)),a,rep(NA,max(n2-opti,0))),
-                   b=c(rep(NA,max(0,n1-opti)),b,rep(NA,max(opti-n2,0))),
-                   loc=(a1loc-max(0,opti-n1)):(a1loc-1+n1+max(n2-opti,0)))
+                      b=c(rep(NA,max(0,n1-opti)),b,rep(NA,max(opti-n2,0))),
+                      loc=(a1loc-max(0,opti-n1)):(a1loc-1+n1+max(n2-opti,0)),
+                      stringsAsFactors=FALSE)
     res.bloc=res.df$loc[(1:n2)+max(0,n1-opti)]
+    if (na.loose) {
+        imp=nrow(res.df)*10
+        
+        res.df$a[is.na(res.df$a)]=imp
+        arle=rle(res.df$a)
+        arle$values[arle$values==imp]=NA
+        
+        res.df$b[is.na(res.df$b)]=imp
+        brle=rle(res.df$b)
+        brle$values[brle$values==imp]=NA
+        uniblen=length(brle$values)
+        bidx=which(is.na(brle$values[-c(1,uniblen)]))
+        if (bidxlen <- length(bidx) > 0) {
+            for (i in 1:bidxlen) {
+                bidxleft=sum(brle$lengths[1:(bidx[i]-1)])
+                bidxright=sum(brle$lengths[1:bidx[i]])+1
+                bleft=brle$values[bidx[i]-1]
+                bright=brle$values[bidx[i]+1]
+                
+                aleft=which(arle$values==bleft)
+                aright=which(arle$values==bright)
+                if (length(aleft)>0 & length(aright)>0) {
+                    aleft=aleft[which.min(abs(sapply(aleft,function(x){sum(arle$lengths[1:x])-bidxleft})))]
+                    aright=aright[which.min(abs(sapply(aright,function(x){sum(arle$lengths[1:(x-1)])+1-bidxright})))]
+                    aNA=sum(arle$lengths[(aleft+1):(aright-1)])
+                    brle$lengths[bidx[i]]=aNA
+                }
+            }
+            if (is.na(brle$values[1])){
+                brle$values=brle$values[-1]
+                brle$lengths=brle$lengths[-1]
+            }
+            if (is.na(brle$values[uniblen])){
+                brle$values=brle$values[-uniblen]
+                brle$lengths=brle$lengths[-uniblen]
+            }
+            b2=inverse.rle(brle)
+            in.res=local.matching(a,b2,a1loc,na.loose=FALSE)
+            res.df=in.res$df
+            res.bloc=in.res$bloc
+        }
+    }
     return(list(df=res.df,bloc=res.bloc))
 }
 
@@ -257,14 +300,14 @@ global.matching=function(df,by){
         for (i in 2:length(x)){
             x1=df[df$x==x[i-1],'label']
             x2=df[df$x==x[i],'label']
-            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1])$bloc
+            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1],FALSE)$bloc
             res$y[res$x==x[i]]=x2pos
         }
     } else {       # then column 'y' and 'label' will not change 
         for (j in 2:length(y)){
             y1=df[df$y==y[j-1],'label']
             y2=df[df$y==y[j],'label']
-            y2pos=local.matching(y1,y2,res$x[res$y==y[j-1]][1])$bloc
+            y2pos=local.matching(y1,y2,res$x[res$y==y[j-1]][1],FALSE)$bloc
             res$x[res$y==y[j]]=y2pos
         }
     }
