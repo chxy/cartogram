@@ -4,11 +4,12 @@
 ##' @param density A vector of the variable of interest. 
 ##' \code{names(density)} should match \code{grids$label}.
 ##' @param pal palette. The input for the argument "col" in \code{image()}.
+##' @param ... na.loose=T/F?
 ##' @return a data frame of coordinates and the corresponding labels, as well as the errors.
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-polish_cart = function(grids,density,pal=NULL){
+polish_cart = function(grids,density,pal=NULL,...){
     all_labels=if (is.factor(grids$label)) levels(grids$label) else unique(grids$label)
     grids$label=as.character(grids$label)
     stopifnot(length(intersect(names(density),unique(grids$label)))>1)
@@ -41,7 +42,7 @@ polish_cart = function(grids,density,pal=NULL){
         column=grids[grids$x==xgrid[i],]
         newgrids1=rbind(newgrids1,panning(column,dens,'x',ycenter))
     }
-    newgrids1=global.matching(newgrids1,'x')
+    newgrids1=global.matching(newgrids1,'x',...)
     image1=complete.image(newgrids1)
     newgrids1=image1$df
     dens$mid_area=table(newgrids1$label)[rownames(dens)]
@@ -56,7 +57,7 @@ polish_cart = function(grids,density,pal=NULL){
         rowline=newgrids1[newgrids1$y==i,]
         newgrids2=rbind(newgrids2,panning(rowline,dens,'y',xcenter))
     }
-    newgrids2=global.matching(newgrids2,'y')
+    newgrids2=global.matching(newgrids2,'y',...)
     image2=complete.image(newgrids2)
     newgrids2=image2$df
     newncell=sum(!is.na(newgrids2$label))
@@ -192,11 +193,11 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' exist, then use the closest tie to the center of the two sequences.
 ##' 4. To match two sequences - "1,1,NA,NA,2,3,3" and "1,1,2,2,3,3,3", 
 ##' the standard result 
-##' 1 1 NA NA 2 3 3
-##' 1 1  2  2 3 3 3
+##' 1 1  2  2 2 3 3
+##' 1 1 NA NA 3 3 3
 ##' is worse than that with a loose rule -
-##' 1 1 NA 2 3 3 NA
-##' 1 1  2 2 3 3  3 
+##' 1 1  2 2 2 3  3
+##' 1 1 NA 2 3 3 NA 
 ##' 
 ##' @param a a numeric vector
 ##' @param b a numeric vector
@@ -208,8 +209,9 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' local.matching(1:5,3:7,0)
 ##' local.matching(rep(1,7),rep(1,3),-3)
 ##' local.matching(rep(1,7),2:5,1)
+##' local.matching(c(1,1,2,2,3,3,3),c(1,1,NA,NA,2,3,3),1,na=TRUE)
 ##' 
-local.matching=function(a,b,a1loc,na.loose=TRUE){
+local.matching=function(a,b,a1loc,na.loose=FALSE){
     n1=length(a)
     n2=length(b)
     s=rep(NA,n1+n2-1)
@@ -237,15 +239,18 @@ local.matching=function(a,b,a1loc,na.loose=TRUE){
     if (na.loose) {
         imp=nrow(res.df)*10
         
-        res.df$a[is.na(res.df$a)]=imp
-        arle=rle(res.df$a)
+        atmp=res.df$a
+        atmp[is.na(atmp)]=imp
+        arle=rle(atmp)
         arle$values[arle$values==imp]=NA
         
-        res.df$b[is.na(res.df$b)]=imp
-        brle=rle(res.df$b)
+        btmp=res.df$b
+        btmp[is.na(btmp)]=imp
+        brle=rle(btmp)
         brle$values[brle$values==imp]=NA
         uniblen=length(brle$values)
-        bidx=which(is.na(brle$values[-c(1,uniblen)]))
+        bidx=which(is.na(brle$values[-c(1,uniblen)]))+1
+        
         if (bidxlen <- length(bidx) > 0) {
             for (i in 1:bidxlen) {
                 bidxleft=sum(brle$lengths[1:(bidx[i]-1)])
@@ -258,10 +263,13 @@ local.matching=function(a,b,a1loc,na.loose=TRUE){
                 if (length(aleft)>0 & length(aright)>0) {
                     aleft=aleft[which.min(abs(sapply(aleft,function(x){sum(arle$lengths[1:x])-bidxleft})))]
                     aright=aright[which.min(abs(sapply(aright,function(x){sum(arle$lengths[1:(x-1)])+1-bidxright})))]
-                    aNA=sum(arle$lengths[(aleft+1):(aright-1)])
+                    if (aleft+1<=aright) {aNA=1} else {
+                        aNA=sum(arle$lengths[(aleft+1):(aright-1)])
+                    }
                     brle$lengths[bidx[i]]=aNA
                 }
             }
+            
             if (is.na(brle$values[1])){
                 brle$values=brle$values[-1]
                 brle$lengths=brle$lengths[-1]
@@ -270,6 +278,7 @@ local.matching=function(a,b,a1loc,na.loose=TRUE){
                 brle$values=brle$values[-uniblen]
                 brle$lengths=brle$lengths[-uniblen]
             }
+            
             b2=inverse.rle(brle)
             in.res=local.matching(a,b2,a1loc,na.loose=FALSE)
             res.df=in.res$df
@@ -289,26 +298,34 @@ local.matching=function(a,b,a1loc,na.loose=TRUE){
 ##' @return a data frame of the column x(the new x coordinate), 
 ##' y(the new y coordinate), and label. Column label should be the same as "df".
 ##' 
-global.matching=function(df,by){
+global.matching=function(df,by,...){
     stopifnot(by %in% c('x','y'), c('x','y') %in% names(df))
     names(df)[which(!names(df)%in%c('x','y'))]='label'
     df=df[order(df$x,df$y),]
     x=sort(unique(df$x))
     y=sort(unique(df$y))
-    res=df
-    if (by=='x'){  # then column 'x' and 'label' will not change 
+    #res=df
+    if (by=='x'){  # then column 'x' and 'label' will not change
+        res=df[df$x==x[1],c('x','y','label')]
         for (i in 2:length(x)){
             x1=df[df$x==x[i-1],'label']
             x2=df[df$x==x[i],'label']
-            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1],FALSE)$bloc
-            res$y[res$x==x[i]]=x2pos
+            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1],...)$df[,2:3]
+            x2pos=x2pos[!is.na(x2pos$b),]
+            #res$y[res$x==x[i]]=x2pos
+            x2df=data.frame(x=x[i],y=x2pos$loc,label=x2pos$b,stringsAsFactors=FALSE)
+            res=rbind(res,x2df)
         }
-    } else {       # then column 'y' and 'label' will not change 
+    } else {       # then column 'y' and 'label' will not change
+        res=df[df$y==y[1],c('x','y','label')]
         for (j in 2:length(y)){
             y1=df[df$y==y[j-1],'label']
             y2=df[df$y==y[j],'label']
-            y2pos=local.matching(y1,y2,res$x[res$y==y[j-1]][1],FALSE)$bloc
-            res$x[res$y==y[j]]=y2pos
+            y2pos=local.matching(y1,y2,res$x[res$y==y[j-1]][1],...)$df[,2:3]
+            y2pos=y2pos[!is.na(y2pos$b),]
+            #res$x[res$y==y[j]]=y2pos
+            y2df=data.frame(x=y2pos$loc,y=y[j],label=y2pos$b,stringsAsFactors=FALSE)
+            res=rbind(res,y2df)
         }
     }
     res
