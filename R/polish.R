@@ -304,29 +304,43 @@ global.matching=function(df,by,...){
     df=df[order(df$x,df$y),]
     x=sort(unique(df$x))
     y=sort(unique(df$y))
-    #res=df
+    res=df
     if (by=='x'){  # then column 'x' and 'label' will not change
-        res=df[df$x==x[1],c('x','y','label')]
         for (i in 2:length(x)){
-            x1=df[df$x==x[i-1],'label']
-            x2=df[df$x==x[i],'label']
-            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1],...)$df[,2:3]
-            x2pos=x2pos[!is.na(x2pos$b),]
+            x1=res[res$x==x[i-1],'label']
+            x2=res[res$x==x[i],'label']
+            res=res[res$x!=x[i],]
+            x2pos=local.matching(x1,x2,res$y[res$x==x[i-1]][1],...)$df[,2:3]            
+            x2pos=x2pos[which.trim(x2pos$b),]
             #res$y[res$x==x[i]]=x2pos
             x2df=data.frame(x=x[i],y=x2pos$loc,label=x2pos$b,stringsAsFactors=FALSE)
             res=rbind(res,x2df)
         }
     } else {       # then column 'y' and 'label' will not change
-        res=df[df$y==y[1],c('x','y','label')]
         for (j in 2:length(y)){
-            y1=df[df$y==y[j-1],'label']
-            y2=df[df$y==y[j],'label']
+            y1=res[res$y==y[j-1],'label']
+            y2=res[res$y==y[j],'label']
+            res=res[res$y!=y[j],]
             y2pos=local.matching(y1,y2,res$x[res$y==y[j-1]][1],...)$df[,2:3]
-            y2pos=y2pos[!is.na(y2pos$b),]
+            y2pos=y2pos[which.trim(y2pos$b),]
             #res$x[res$y==y[j]]=y2pos
             y2df=data.frame(x=y2pos$loc,y=y[j],label=y2pos$b,stringsAsFactors=FALSE)
             res=rbind(res,y2df)
         }
     }
     res
+}
+
+##' Remove the NA's in the beginning and the end of a vector
+##' 
+##' @param xvec a vector
+##' @return the location from the first to the last non-NA element
+##' @export
+##' @examples
+##' which.trim(c(NA,0,1,2,NA,7,NA,NA))
+##' which.trim(rep(NA,5))
+##' 
+which.trim=function(xvec){
+    a=which(!is.na(xvec))
+    if (length(a)>0) return(a[1]:a[length(a)]) else {return(1:length(xvec))}
 }
