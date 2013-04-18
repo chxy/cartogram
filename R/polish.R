@@ -168,16 +168,19 @@ panning=function(df,dnsty,by,center){
 ##' similarity(1:5,5:1)
 ##' similarity(1:5,2:6,diag.wt=0.5)
 ##' similarity(1:5,c(NA,2:5),na.panelty=0.2)
+##' similarity(c(1,1,NA,NA,3,3,3),c(1,1,NA,NA,2,3,3))
+##' similarity(c(1,1,NA,NA,3,3,3),c(1,1,NA,2,3,3,NA))
 ##'
-similarity=function(a,b,na.panelty=0,diag.wt=0){
+similarity=function(a,b,na.panelty=0.1,diag.wt=0.1){
     n=length(a)
     stopifnot(n==length(b),na.panelty>=0,diag.wt>=0)
     r1=sum(a==b,na.rm=TRUE)
     r1top=sum(a[-1]==b[1:(n-1)],na.rm=TRUE)
     r1bot=sum(a[1:(n-1)]==b[-1],na.rm=TRUE)
-    r2=sum(is.na(a)|is.na(b))
-    #r3=n-r1-r2
-    (r1+(r1top+r1bot)*diag.wt-r2*na.panelty)/n
+    r2=sum(is.na(a) & is.na(b))
+    r3=sum(is.na(a) | is.na(b)) - r2
+    r4=n-r1-r2-r3
+    (r1+(r1top+r1bot)*diag.wt-(r2+r3)*na.panelty-r4*min(1,2*na.panelty))/n
 }
 
 
@@ -210,6 +213,7 @@ similarity=function(a,b,na.panelty=0,diag.wt=0){
 ##' local.matching(rep(1,7),rep(1,3),-3)
 ##' local.matching(rep(1,7),2:5,1)
 ##' local.matching(c(1,1,2,2,3,3,3),c(1,1,NA,NA,2,3,3),1,na=TRUE)
+##' local.matching(c(1,1,NA,NA,3,3,3),c(1,1,NA,NA,2,3,3),1,na=TRUE)
 ##' 
 local.matching=function(a,b,a1loc,na.loose=FALSE){
     n1=length(a)
@@ -218,7 +222,7 @@ local.matching=function(a,b,a1loc,na.loose=FALSE){
     for (i in 1:length(s)){
         a1=c(rep(NA,max(0,i-n1)),a,rep(NA,max(n2-i,0)))
         b1=c(rep(NA,max(0,n1-i)),b,rep(NA,max(i-n2,0)))
-        s[i]=similarity(a1,b1,na.panelty=0,diag.wt=0)
+        s[i]=similarity(a1,b1)
     }
     opti=which(s==max(s))
     if (length(opti)>1){
@@ -250,20 +254,20 @@ local.matching=function(a,b,a1loc,na.loose=FALSE){
         brle$values[brle$values==imp]=NA
         uniblen=length(brle$values)
         bidx=which(is.na(brle$values[-c(1,uniblen)]))+1
-        
+
         if (bidxlen <- length(bidx) > 0) {
             for (i in 1:bidxlen) {
                 bidxleft=sum(brle$lengths[1:(bidx[i]-1)])
                 bidxright=sum(brle$lengths[1:bidx[i]])+1
                 bleft=brle$values[bidx[i]-1]
                 bright=brle$values[bidx[i]+1]
-                
+
                 aleft=which(arle$values==bleft)
                 aright=which(arle$values==bright)
                 if (length(aleft)>0 & length(aright)>0) {
                     aleft=aleft[which.min(abs(sapply(aleft,function(x){sum(arle$lengths[1:x])-bidxleft})))]
                     aright=aright[which.min(abs(sapply(aright,function(x){sum(arle$lengths[1:(x-1)])+1-bidxright})))]
-                    if (aleft+1<=aright) {aNA=1} else {
+                    if (aleft+1>=aright) {aNA=1} else {
                         aNA=sum(arle$lengths[(aleft+1):(aright-1)])
                     }
                     brle$lengths[bidx[i]]=aNA
