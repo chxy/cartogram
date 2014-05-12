@@ -10,4 +10,5 @@ Description: Making cartograms.
              Grid-based cartograms.
              Non-contiguous cartograms.
 Depends: maps
-License: GPL
+License: GPL (>= 2.0)
+LazyData: true
