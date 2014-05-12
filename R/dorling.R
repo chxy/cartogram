@@ -5,9 +5,9 @@
 ##' @param centroidy A vector of y-coordinates of the regions.
 ##' @param density A vector of the variable of interest. It will be used as the radii of the circles.
 ##' @param nbr A list of the neighbors of every region. Each element is a vector of all the neighbor names of a region. If nbr=NULL, then it is assumed that no region has any neighbors. If nbr is not NULL, then names should be given to all the elements of the list, for matching the neighbors with the host region name, otherwise the parameter "name" (a character vector) will be used as the element names of nbr. Besides, any values in nbr that are not in "name" will be removed. The length of nbr could be different from the length of "name", but any element in nbr whose name is not in "name" will be removed too.
-##' @param shared.border A matrix of the counts of shared borders, typically generated from the function border_summary(). It is used to scale the attract force.
+##' @param shared.border A matrix of the counts of shared borders, typically generated from the function border_summary_count(). It is used to scale the attract force.
 ##' @param tolerance Tolerant value for the sum of overlapped radii.
-##' @param dist.ratio The threshold to determine whether an attract force is added. It is applied to the ratio of the distance between two centroids, and the sum of those two radii.
+##' @param dist.ratio The threshold to determine whether an attract force is added. It is applied to the ratio of the distance between two centroids and the sum of the two radii.
 ##' @param iteration The limit of the number of iterations. Default to be 9999.
 ##' @param polygon.vertex The number of vertice of the circle. Default to be 100. If polygon.vertex=4 then diamands applies. If polygon.vertex=6, then hexagon applies.
 ##' @param animation Whether to show the movements of centroids.
@@ -15,7 +15,7 @@
 ##' @example inst/example.R
 ##' @export
 ##' 
-dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, ...){
+dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, linknbr=FALSE, ggplot2=FALSE, ...){
     n=length(name)
     stopifnot(n==length(centroidx), n==length(centroidy), n==length(density), is.numeric(iteration))
     
@@ -136,7 +136,7 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
         crtDist=as.matrix(dist(crtloc))
     }
     
-    plot(y~x,crtloc,type='p',col=2,pch=20)
+    plot(y~x,crtloc,type='p',col=2,pch=20,xpd=NA,frame=FALSE,xaxt='n',yaxt='n')
     circle(crtloc$x,crtloc$y,dat$density,vertex=polygon.vertex,...)
     text(crtloc$x,crtloc$y,dat$name,cex=0.8)
 }
