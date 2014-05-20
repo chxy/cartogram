@@ -90,6 +90,8 @@ border_summary_count = function(region, x, y){
 ##' @param poly Polygon names. One region may consist of several polygons.
 ##' @param x X-coordinates of all the vertexes.
 ##' @param y Y-coordinates of all the vertexes.
+##' @param nb a list of the neighbors of each region. Default to be the outcome from 
+##' the function \code{nbrlist()}.
 ##' @return A square matrix with diagonal elements being the perimeter 
 ##' (count of vertexes) of the regions, and the non-diagonal cells being 
 ##' the count of shared vertexes between the row and column regions.
@@ -99,20 +101,26 @@ border_summary_count = function(region, x, y){
 ##' state_border=border_summary_length(state$abbr,state$polygon,state$x,state$y)
 ##' system.time(border_summary_length(state$abbr,state$polygon,state$x,state$y))
 ##' 
-border_summary_length = function(region, poly, x, y){
+border_summary_length = function(region, poly, x, y, nb=NULL){
   stopifnot(length(x)==length(region), length(y)==length(region), length(poly)==length(region))
   name = if (is.factor(region)) {levels(region)} else {sort(unique(region))}
   k = length(name)
   # To check if the coordinates are identical, by rounding the numbers to mininal 5 digits
   digitx = max(min(nchar(as.character(x))),5)
   digity = max(min(nchar(as.character(y))),5)
-  dat=data.frame(r=as.character(region), l=as.character(poly),
-                 x=x, y=y, stringsAsFactors=FALSE)
-  dat$p=paste(round(dat$x,digitx),round(dat$y,digity))
-  dat$q=dat$p[c(2:nrow(dat),1)]
-  dat=dat[which(diff(as.integer(factor(dat$l)))==0),]
-  dat$pq=paste(dat$p,dat$q)
-  dat$qp=paste(dat$q,dat$p)
+  dat = data.frame(r=as.character(region), l=as.character(poly),
+                   x=x, y=y, stringsAsFactors=FALSE)
+  polytail = unname(cumsum(table(poly)[unique(poly)]))
+  polyhead = c(1,polytail[-length(polytail)]+1)
+  polygroup = data.frame(head=polyhead, tail=polytail)
+  polyidx = unlist(apply(polygroup,1,function(x) c((x[1]+1):x[2],unname(x[1]))))
+  dat$qx = x[polyidx]
+  dat$qy = y[polyidx]
+  dat$p = paste(round(dat$x,digitx),round(dat$y,digity))
+  dat$q = paste(round(dat$qx,digitx),round(dat$qy,digity))
+  dat = dat[which(diff(as.integer(factor(dat$l)))==0),]
+  dat$pq = paste(dat$p,dat$q)
+  dat$qp = paste(dat$q,dat$p)
   
   # get the perimeter
   peri = by(dat,dat$l,function(s){sum(sqrt((diff(s$x))^2+(diff(s$y))^2))})
@@ -120,57 +128,38 @@ border_summary_length = function(region, poly, x, y){
   tmp$peri = unname(peri[tmp$l])
   peri = tapply(tmp$peri,tmp$r,sum)
   
-  misshared=data.frame()
-  for (i in name){
-    tmpshared=dat[dat$r==i,]
-    tmpidx1= duplicated(tmpshared$pq) | duplicated(tmpshared$pq,fromLast=TRUE)
-    tmpidx2= tmpshared$qp %in% tmpshared$pq
-    misshared=rbind(misshared,tmpshared[tmpidx1|tmpidx2,])
-  }
-  misidx=c()
-  for (i in nrow(misshared):2){
-    misidx=c(misidx,which(misshared$pq[1:(i-1)] %in% misshared[i,c('pq','qp')] & misshared$r[1:(i-1)]==misshared$r[i]))
-  }
-  dat=dat[setdiff(rownames(dat),rownames(misshared)[misidx]),]
+  # find the neighbor first
+  if (is.null(nb)) nb=nbrlist(region, x, y, corner=FALSE)
+  nbnames = names(nb)
   
-  idx1= duplicated(dat$pq) | duplicated(dat$pq,fromLast=TRUE)
-  idx2= dat$qp %in% dat$pq
-  shared=dat[idx1|idx2,]
-  rownames(shared)=1:nrow(shared)
-  
-  tmpshared=shared
-  s=list()
-  for (i in 1:nrow(shared)) {
-    if (i %in% rownames(tmpshared)){
-      tmpidx1=which(tmpshared$pq == shared$pq[i])
-      tmpidx2=which(tmpshared$qp == shared$pq[i])
-      tmpidx=sort(union(tmpidx1,tmpidx2))
-      s[[i]]=rownames(tmpshared)[tmpidx]
-      tmpshared=tmpshared[-tmpidx,]
-    }    
+  # neighbor matrix
+  res = matrix(0,nrow=k,ncol=k)
+  rownames(res) = colnames(res) = name
+  for (i in 1:k) {
+    res[nbnames[i],nb[[i]]] = 1
   }
-  s=s[sapply(s,function(x)!is.null(x))]
+  res[lower.tri(res)] = 0
   
-  res=data.frame()
-  for (i in 1:length(s)){
-    tmpshared=shared[s[[i]],]
-    tmpdist=as.numeric(strsplit(tmpshared$pq[1]," ")[[1]])
-    tmpdist=sqrt((diff(tmpdist[c(1,3)]))^2+(diff(tmpdist[c(2,4)]))^2)
-    if (length(s[[i]])<3){
-      tmpres=data.frame(r1=tmpshared$r[1],r2=tmpshared$r[2],dist=tmpdist)      
-    }else{
-      tmpr=t(combn(length(s[[i]]),2))
-      tmpres=data.frame(r1=tmpshared$r[tmpr[,1]],r2=tmpshared$r[tmpr[,2]],dist=tmpdist)
+  # fill in the matrix
+  for (i in 1:k){
+    idxrow = which(res[i,]==1)
+    if (length(idxrow)==0) next
+    for (j in idxrow){
+      tmpdat = dat[dat$r %in% name[c(i,j)],]
+      tmpdat = tmpdat[duplicated(tmpdat$p) | duplicated(tmpdat$p,fromLast=TRUE),]
+      tmpres = overlapC(tmpdat$pq,tmpdat$qp)
+      tmpres = tmpres[rowSums(tmpres)>0,,drop=FALSE]
+      resrow = data.frame(r1=tmpdat[tmpres[,1],'r'], r2=tmpdat[tmpres[,2],'r'],
+                          tmpdat[tmpres[,1],c('x','y','qx','qy')],
+                          stringsAsFactors=FALSE)
+      resrow$dist = sqrt((resrow$x-resrow$qx)^2+(resrow$y-resrow$qy)^2)
+      res[i,j] = sum(resrow$dist[resrow$r1 != resrow$r2])
     }
-    res=rbind(res,tmpres)
   }
   
-  res$r1=factor(res$r1,levels=name)
-  res$r2=factor(res$r2,levels=name)
-  count=table(res[,1:2])
-  distance=tapply(res$dist,res[,1:2],sum)
-  distance[is.na(distance)]=0
-  return(list(dist=distance,cnt=count))
+  res = res + t(res)
+  diag(res) = peri
+  return(res)
 }
 
 library(Rcpp)
@@ -190,8 +179,3 @@ cppFunction('
     return out;
   }
 ')
-# aaa=overlapC(dat$pq,dat$qp)
-# aaa=aaa[rowSums(aaa)>0,]
-# res=data.frame(r1=dat[aaa[,1],'r'],r2=dat[aaa[,2],'r'],dist=dat[aaa[,1],'pq'],stringsAsFactors=FALSE)
-# resd=lapply(strsplit(res$dist," "),as.numeric)
-# res$dist=sapply(resd,function(x)sqrt((diff(x[c(1,3)]))^2+(diff(x[c(2,4)]))^2))

@@ -43,10 +43,10 @@ rnbr = function(distmtrx,r=1){
 ##' Find all the neighbors with shared border.
 ##' 
 ##' @param region Region names.
-##' @param x X-coordinates of all the border.
-##' @param y Y-coordinates of all the border.
+##' @param x X-coordinates of all the vertexes
+##' @param y Y-coordinates of all the vertexes
 ##' @param corner whether the sharing of only one corner point is also defined as "neighbor".
-##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the length of shared border (from the longest to the shortest).
+##' @return A list of neighbors. In each element(region/area), the neighbors are sorted by the length of shared vertexes (from the longest to the shortest).
 ##' @export
 ##' @examples
 ##' data(usGeoInfo)
@@ -57,12 +57,11 @@ nbrlist = function(region,x,y,corner=TRUE){
     stopifnot(length(x)==length(region) && length(y)==length(region))
     digitx = max(min(nchar(as.character(x))),5)
     digity = max(min(nchar(as.character(y))),5)
-    dat=data.frame(r=region,x=x,y=y)
-    dat$r=as.character(dat$r)
+    dat=data.frame(r=region,x=x,y=y,stringsAsFactors=FALSE)
     dat$p=paste(round(dat$x,digitx),round(dat$y,digity))
     dat=dat[!duplicated(dat),]
     censordat=dat[duplicated(dat$p)|duplicated(dat$p,fromLast=TRUE),]
-    uniregion=sort(unique(region))
+    uniregion=if (is.factor(region)) {levels(region)} else {sort(unique(region))}
     k=length(uniregion)
     res=list()
     for (i in 1:k){
