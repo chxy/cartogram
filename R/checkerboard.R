@@ -80,7 +80,9 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
         image(xgrid,ygrid,matrix(as.integer(grids$label),nrow=length(xgrid),ncol=length(ygrid)),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     } 
     
-    return(grids[,c(1:3,5)])
+    res = grids[,c(1:3,5)]
+    attr(res,'nbins') = round(diff(range(xborder))/binwidth[1])
+    return(res)
 }
 
 
