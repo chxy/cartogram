@@ -2,19 +2,17 @@ data(usGeoInfo)
 
 r=usCapitals[,c(1,2,6,8)]
 r$WaterRatio=r$WaterSqMi/r$TotalSqMi*5
-res=map_scaling(state[,c(4,1,2)],r[,c(1,4)],TRUE)
-
-r$State=tolower(r$State)
-polyname=state[!duplicated(state[,4:5]),3:5]
-r=merge(polyname,r,by.x=1,by.y=1)
-res=map_scaling(state[,c(5,1,2)],r[,c(3,7)],TRUE)
-
-res1=res
-idx=setdiff(1:nrow(res1),rownames(res1))
-res1[(1:length(idx))+nrow(res1),]=NA
-rownames(res1)[nrow(res1)+1-(1:length(idx))]=idx
-res1=res1[order(as.integer(rownames(res1))),]
-plot(res1[,2],res1[,3],type='l',xlab='longitude',ylab='latitude')
+vote = r$WaterRatio
+names(vote)=r$Abbr
+#r$State=tolower(r$State)
+#polyname=state[!duplicated(state[,4:5]),3:5]
+#r=merge(polyname,r,by.x=1,by.y=1)
+res=map_scaling(state[,c(5,4,1,2)],vote,FALSE)
+# idx=setdiff(1:nrow(res),rownames(res))
+# res[(1:length(idx))+nrow(res),]=NA
+# rownames(res)[nrow(res)+1-(1:length(idx))]=idx
+# res=res[order(as.integer(rownames(res))),]
+# plot(res[,2],res[,3],type='l')
 
 res$state=gsub(":.*$","",res$polygon)
 unipoly=!duplicated(res$polygon)
@@ -97,3 +95,14 @@ for (s in 1:30){
     points(crtloc$x/bin,crtloc$y/bin,pch=21,cex=rad$r)
     Sys.sleep(0.2)
 }
+
+
+##### Example 2 ##### Presidential Election 2012 #####
+
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,11:12)]
+ratio=dat$electors/dat$TotalSqMi*2000
+#ratio=dat$electors
+vote=dat$result
+names(ratio)=names(vote)=dat$Abbr
+res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',TRUE,FALSE)
+map('state',add=T,col='grey70')
