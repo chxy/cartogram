@@ -12,7 +12,7 @@
 ##' @export
 ##' @examples
 ##' data(usCapitals)
-##' state_border=border_summary_count(state$abbr,state$x,state$y)
+##' state_vertex=border_summary_count(state$abbr,state$x,state$y)
 ##' 
 border_summary_count = function(region, x, y){
   stopifnot(length(x)==length(region), length(y)==length(region))

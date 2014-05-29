@@ -35,11 +35,11 @@ circle = function(xvec,yvec,rvec,vertex=100,border=1,col=NULL,add=TRUE, square=F
         angle.inc = 2 * pi / vertex
         angles = seq(0, 2 * pi - angle.inc, by = angle.inc)
     }
-    if (!add) plot(c(min(x-r),max(x+r)),c(min(y-r),max(y+r)),type='n',xlab='x',ylab='y',...)
+    if (!add) plot(c(min(xvec-rvec),max(xvec+rvec)),c(min(yvec-rvec),max(yvec+rvec)),type='n',xlab='longitude',ylab='latitude',...)
     for (i in 1:n){
         xv <- cos(angles) * rvec[i] + xvec[i]
         yv <- sin(angles) * rvec[i] + yvec[i]
-        polygon(xv, yv, border = border[i], col = col)
+        polygon(xv, yv, border = border[i], col = col[i])
     }
 }
 
@@ -62,7 +62,7 @@ square = function(xvec,yvec,rvec,border=1,col=NULL,add=TRUE,...){
     stopifnot(length(yvec)==n && n==length(rvec))
     if (length(border) < n)  border = rep(border, length.out = n)
     if (!is.null(col) && length(col) < n) col = rep(col, length.out = n)
-    if (!add) plot(c(min(x-r),max(x+r)),c(min(y-r),max(y+r)),type='n',xlab='x',ylab='y',...)
+    if (!add) plot(c(min(xvec-rvec),max(xvec+rvec)),c(min(yvec-rvec),max(yvec+rvec)),type='n',xlab='x',ylab='y',...)
     for (i in 1:n){
         xv <- c(-1, 1, 1, -1) * rvec[i] + xvec[i]
         yv <- c(-1, -1, 1, 1) * rvec[i] + yvec[i]

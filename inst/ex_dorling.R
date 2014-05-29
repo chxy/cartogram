@@ -4,7 +4,8 @@ data(usGeoInfo)
 data(crimes)
 dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,9,10,12)]
 dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
-nbrs=statenbrs[names(statenbrs) %in% dat$Abbr]
+state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
+nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
 nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 dat$density=sqrt(dat$population/dat$TotalSqMi)
 
@@ -26,6 +27,16 @@ nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 
 dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$DeathPct,nbrs)
 dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$ALE-min(dat$ALE)+2,nbrs)
+
+##### Example 3 ##### Presidential election 2012 #####
+
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,9:12)]
+state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
+nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
+nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
+state_border=border_summary_length(state$abbr,state$polygon,state$x,state$y)
+
+res=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,state_border,iteration=150,name.text=TRUE,dist.ratio=1.2,frame=FALSE, col=dat$result)
 
 ################################################################################
 
