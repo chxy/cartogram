@@ -1,4 +1,4 @@
-Package: Cartograms
+Package: cartogram
 Type: Package
 Title: Create cartograms in R
 Version: 0.0.2
