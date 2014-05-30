@@ -1,14 +1,18 @@
 Package: Cartograms
 Type: Package
 Title: Create cartograms in R
-Version: 0.0.1
-Date: 2013-02-21
+Version: 0.0.2
+Date: 2014-05-30
 Author: Xiaoyue Cheng, Dianne Cook
 Maintainer: Xiaoyue Cheng <xycheng@iastate.edu>
-Description: Making cartograms. 
-             Dorling and Dorling-like cartograms.
-             Grid-based cartograms.
-             Non-contiguous cartograms.
-Depends: maps
+Description: Making cartograms.
+    Dorling and Dorling-like cartograms.
+    Grid-based cartograms.
+    Non-contiguous cartograms.
+Depends:
+    maps,
+    Rcpp
+Suggests:
+    Rcartogram
 License: GPL (>= 2.0)
 LazyData: true
