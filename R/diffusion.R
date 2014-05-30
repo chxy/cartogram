@@ -12,6 +12,7 @@
 ##' @param blank.init fill the NA's of the grids with blank.init * min(size)
 ##' @param ... other paramters passed to the cartogram function
 ##' @return a data frame with four columns: new x and y coordinates, polygon names and region names.
+##' @export
 ##' @example inst/ex_diffusion.R
 ##' 
 

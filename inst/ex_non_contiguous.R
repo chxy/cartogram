@@ -104,5 +104,5 @@ ratio=dat$electors/dat$TotalSqMi*2000
 #ratio=dat$electors
 vote=dat$result
 names(ratio)=names(vote)=dat$Abbr
-res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',TRUE,FALSE)
+res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',FALSE,FALSE)
 map('state',add=T,col='grey70')
