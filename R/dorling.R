@@ -16,7 +16,7 @@
 ##' @param nbredge whether to draw the lines between neighbor regions.
 ##' @param name.text whether to print the region names on the circles or polygons.
 ##' @param ggplot2 whether to use ggplot2 to draw the cartogram.
-##' @example inst/example.R
+##' @example inst/ex_dorling.R
 ##' @export
 ##' 
 dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, color=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, nbredge=ifelse(is.null(nbr),FALSE,TRUE), name.text=TRUE, ggplot2=FALSE, ...){
