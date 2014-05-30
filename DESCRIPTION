@@ -11,6 +11,7 @@ Description: Making cartograms.
     Non-contiguous cartograms.
 Depends:
     maps,
+    sp,
     Rcpp
 Suggests:
     Rcartogram
