@@ -1,3 +1,16 @@
+##### Example 1 ##### Presidential Election 2012 #####
+
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,11:12)]
+ratio=dat$electors/dat$TotalSqMi*2000
+#ratio=dat$electors
+vote=dat$result
+names(ratio)=names(vote)=dat$Abbr
+res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',FALSE,FALSE)
+map('state',add=T,col='grey70')
+
+
+##### Example 2 ##### Water area proportion #####
+
 data(usGeoInfo)
 
 r=usCapitals[,c(1,2,6,8)]
@@ -95,14 +108,3 @@ for (s in 1:30){
     points(crtloc$x/bin,crtloc$y/bin,pch=21,cex=rad$r)
     Sys.sleep(0.2)
 }
-
-
-##### Example 2 ##### Presidential Election 2012 #####
-
-dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,11:12)]
-ratio=dat$electors/dat$TotalSqMi*2000
-#ratio=dat$electors
-vote=dat$result
-names(ratio)=names(vote)=dat$Abbr
-res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',FALSE,FALSE)
-map('state',add=T,col='grey70')

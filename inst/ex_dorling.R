@@ -1,4 +1,13 @@
-##### Example 1 ##### crime:population #####
+##### Example 1 ##### Presidential Election 2012 #####
+
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,9:12)]
+state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
+nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
+nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
+# state_border=border_summary_length(state$abbr,state$polygon,state$x,state$y)
+res=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,iteration=100,name.text=TRUE,dist.ratio=1.2,frame=FALSE, col=dat$result)
+
+##### Example 2 ##### crime:population #####
 
 data(usGeoInfo)
 data(crimes)
@@ -13,7 +22,7 @@ dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,iteration=100)
 dorling(dat$Abbr,dat$centroidx,dat$centroidy,dat$density,nbrs,iteration=50,animation=FALSE)
 dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,iteration=10,square=TRUE)
 
-##### Example 2 ##### CHSI:deathpct/ALE #####
+##### Example 3 ##### CHSI:deathpct/ALE #####
 
 data(usGeoInfo)
 data(CHSI_2009)
@@ -27,16 +36,6 @@ nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 
 dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$DeathPct,nbrs)
 dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$ALE-min(dat$ALE)+2,nbrs)
-
-##### Example 3 ##### Presidential election 2012 #####
-
-dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,9:12)]
-state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
-nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
-nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
-state_border=border_summary_length(state$abbr,state$polygon,state$x,state$y)
-
-res=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,state_border,iteration=150,name.text=TRUE,dist.ratio=1.2,frame=FALSE, col=dat$result)
 
 ################################################################################
 
