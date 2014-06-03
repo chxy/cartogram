@@ -82,3 +82,22 @@ NULL
 ##' statenbrs[1:5]
 ##'
 NULL
+
+
+##' Presidential election 2012.
+##'
+##' The data includes the result of presidential election in 2012.
+##'
+##' \describe{
+##' \item{\code{state}}{A vector of the abbrevated state names.} 
+##' \item{\code{electors}}{Number of electors in each state.} 
+##' \item{\code{result}}{A character vector of red(republican) or blue(democratic).}
+##' }
+##' @name election2012
+##' @docType data
+##' @usage data(election2012)
+##' @keywords datasets
+##' @examples
+##' head(election2012)
+##'
+NULL
