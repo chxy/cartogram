@@ -7,7 +7,8 @@
 ##' @param size the size vector for regions (length must be equal to the number of regions)
 ##' @param color the color vector for regions (length must be equal to the number of regions)
 ##' @param border the border vector for regions (length must be equal to the number of regions)
-##' @param nrows the resolution to get a grid
+##' @param gridmap output of the function \code{checkerboard}. Default to be null.
+##' @param nrows the resolution to get a grid. If \code{gridmap} is not null, then nrows must be the attribute 'nbins' of gridmap.
 ##' @param diffuse a positive value to control the diffusing/shrinking rate
 ##' @param blank.init fill the NA's of the grids with blank.init * min(size)
 ##' @param ... other paramters passed to the cartogram function
@@ -16,7 +17,7 @@
 ##' @example inst/ex_diffusion.R
 ##' 
 
-Rcartogram = function(x, y, poly, region, size, color, border=0, nrows=50, diffuse=2, blank.init=.8, ...){
+Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, ...){
   library(Rcartogram)
   uniregion = unique(region); unipoly = unique(poly)
   stopifnot(length(x)==length(y), length(x)==length(poly), 
@@ -42,7 +43,12 @@ Rcartogram = function(x, y, poly, region, size, color, border=0, nrows=50, diffu
   # get the grid map
   label = region[!duplicated(poly)]
   names(label) = unipoly
-  gridmap=checkerboard(x,y,poly,label,nbins=nrows,plot=FALSE)
+  if (is.null(gridmap)) {
+    gridmap=checkerboard(x,y,poly,label,nbins=nrows,plot=FALSE)  
+  } else {
+    stopifnot(exists(attr(gridmap, "nbins")))
+    ncols = nrows = attr(gridmap, "nbins")
+  }
   
   # get the matrix
   gridrecog = matrix(as.character(gridmap$label),nrow=nrows)
