@@ -13,7 +13,7 @@ dat$density=dat$density/max(dat$density)*mean(origindist)/5
 
 shinyServer(function(input, output) {
 
-    output$origPlot <- reactivePlot(function() {
+    output$origPlot <- renderPlot({
 
         plot(y~x,state,type='n',xlab="",ylab="",frame=FALSE,xaxt='n',yaxt='n')
         map("state",add=TRUE)
@@ -26,7 +26,7 @@ shinyServer(function(input, output) {
         text(dat$Longitude,dat$Latitude,dat$Abbr,cex=0.8)
     })
     
-    output$distPlot <- reactivePlot(function() {
+    output$distPlot <- renderPlot({
         
         if (input$shape==1) {
             dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,dist.ratio=input$distratio, iteration=input$iteration, animation=FALSE, col='pink', square=TRUE)

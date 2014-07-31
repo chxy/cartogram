@@ -14,7 +14,7 @@ names(murder)=crimes$state
 
 shinyServer(function(input, output) {
  
-    output$origPlot <- reactivePlot(function() {
+    output$origPlot <- renderPlot({
         
         gridmap=checkerboard(state$x,state$y,state$polygon,statelabel,nbins=input$resolution,plot=FALSE)
         plot(y~x,data=gridmap,pch=15,col=gridmap$label)
@@ -23,7 +23,7 @@ shinyServer(function(input, output) {
         
     })
     
-    output$distPlot <- reactivePlot(function() {
+    output$distPlot <- renderPlot({
         
         gridmap=checkerboard(state$x,state$y,state$polygon,statelabel,nbins=input$resolution,plot=FALSE)
         newgrid=grid_cart(gridmap,murder,iteration=input$iteration,animation=FALSE)

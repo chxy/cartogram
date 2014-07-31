@@ -11,13 +11,14 @@
 ##' @param nrows the resolution to get a grid. If \code{gridmap} is not null, then nrows must be the attribute 'nbins' of gridmap.
 ##' @param diffuse a positive value to control the diffusing/shrinking rate
 ##' @param blank.init fill the NA's of the grids with blank.init * min(size)
+##' @param interpolate weight of the interpolation between the cartogram and original map. Must be within 0 and 1.
 ##' @param ... other paramters passed to the cartogram function
 ##' @return a data frame with four columns: new x and y coordinates, polygon names and region names.
 ##' @export
 ##' @example inst/ex_diffusion.R
 ##' 
 
-Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, ...){
+Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, interpolate=1, ...){
   library(Rcartogram)
   uniregion = unique(region); unipoly = unique(poly)
   stopifnot(length(x)==length(y), length(x)==length(poly), 
@@ -70,12 +71,17 @@ Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, n
   final = data.frame(x = (pred$x - extra[1] - 1) / (nrows - 1) * diff(xlim) + xlim[1],
                      y = (pred$y - extra[2] - 1) / (ncols - 1) * diff(ylim) + ylim[1],
                      abbr = region, poly = poly, stringsAsFactors=FALSE)
-  
-  plot(final$x,final$y,type='n',xlab='',ylab='',xaxt='n',yaxt='n',frame=FALSE)
-  for (i in 1:length(unipoly)) {
-    tmpidx = which(poly == unipoly[i])
-    polygon(final$x[tmpidx], final$y[tmpidx], border = border[label[unipoly[i]]], col = color[label[unipoly[i]]])
+  intplt = final
+  if (interpolate < 1) {
+    intplt$x = final$x * interpolate + x * (1-interpolate)
+    intplt$y = final$y * interpolate + y * (1-interpolate)
   }
   
-  return(final)
+  plot(intplt$x,intplt$y,type='n',xlab='',ylab='',xaxt='n',yaxt='n',frame=FALSE)
+  for (i in 1:length(unipoly)) {
+    tmpidx = which(poly == unipoly[i])
+    polygon(intplt$x[tmpidx], intplt$y[tmpidx], border = border[label[unipoly[i]]], col = color[label[unipoly[i]]])
+  }
+  
+  return(list(final=final,interpolation=intplt))
 }
