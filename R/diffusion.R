@@ -5,20 +5,17 @@
 ##' @param poly a vector of the polygon names. Must be of the same length with \code{x}, and unique for each polygon.
 ##' @param region a vector of the region names. Must be of the same length with \code{x}, and unique for each region.
 ##' @param size the size vector for regions (length must be equal to the number of regions)
-##' @param color the color vector for regions (length must be equal to the number of regions)
-##' @param border the border vector for regions (length must be equal to the number of regions)
 ##' @param gridmap output of the function \code{checkerboard}. Default to be null.
 ##' @param nrows the resolution to get a grid. If \code{gridmap} is not null, then nrows must be the attribute 'nbins' of gridmap.
 ##' @param diffuse a positive value to control the diffusing/shrinking rate
 ##' @param blank.init fill the NA's of the grids with blank.init * min(size)
-##' @param interpolate weight of the interpolation between the cartogram and original map. Must be within 0 and 1.
 ##' @param ... other paramters passed to the cartogram function
 ##' @return a data frame with four columns: new x and y coordinates, polygon names and region names.
 ##' @export
 ##' @example inst/ex_diffusion.R
 ##' 
 
-Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, interpolate=1, ...){
+Rcartogram = function(x, y, poly, region, size, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, ...){
   library(Rcartogram)
   uniregion = unique(region); unipoly = unique(poly)
   stopifnot(length(x)==length(y), length(x)==length(poly), 
@@ -30,16 +27,6 @@ Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, n
   ncols = nrows
   xlim = range(x, na.rm = TRUE)
   ylim = range(y, na.rm = TRUE)
-  
-  # color and border
-  if (!is.null(color)) color=complete_color(color, length(size))
-  if (!is.null(border)) border=complete_color(border, length(size))
-  if (!is.null(names(color))) {
-    stopifnot(length(setdiff(uniregion,names(color)))==0)
-  } else if (!is.null(color)) names(color) = uniregion
-  if (!is.null(names(border))) {
-    stopifnot(length(setdiff(uniregion,names(border)))==0)
-  } else names(border) = uniregion
   
   # get the grid map
   label = region[!duplicated(poly)]
@@ -71,17 +58,59 @@ Rcartogram = function(x, y, poly, region, size, color, border=0, gridmap=NULL, n
   final = data.frame(x = (pred$x - extra[1] - 1) / (nrows - 1) * diff(xlim) + xlim[1],
                      y = (pred$y - extra[2] - 1) / (ncols - 1) * diff(ylim) + ylim[1],
                      abbr = region, poly = poly, stringsAsFactors=FALSE)
-  intplt = final
-  if (interpolate < 1) {
-    intplt$x = final$x * interpolate + x * (1-interpolate)
-    intplt$y = final$y * interpolate + y * (1-interpolate)
-  }
+  finalx = range(final$x)
+  final$x = (final$x-finalx[1]) / (diff(finalx)) * (diff(xlim)) + xlim[1]
+  finaly = range(final$y)
+  final$y = (final$y-finaly[1]) / (diff(finaly)) * (diff(ylim)) + ylim[1]
   
-  plot(intplt$x,intplt$y,type='n',xlab='',ylab='',xaxt='n',yaxt='n',frame=FALSE)
+  return(final)
+}
+
+
+##' Interpolate between two maps
+##' @param coord1,coord2 coordinates of the two maps. Must be the lists or data frames that contain two vectors named x and y respectively.
+##' @param wt weight of the interpolation between the cartogram and original map. Must be within 0 and 1.
+##' @export
+##' 
+interpolate = function(coord1,coord2,wt=1){
+  intplt = coord1
+  if (wt < 1) {
+    intplt$x = coord1$x * wt + coord2$x * (1-wt)
+    intplt$y = coord1$y * wt + coord2$y * (1-wt)
+  }
+  return(intplt)
+}
+
+
+##' Plot the contiguous cartogram or map
+##' @param coord a data frame contains x, y, abbr, and poly.
+##' @param color the color vector for regions (length must be equal to the number of regions)
+##' @param border the border vector for regions (length must be equal to the number of regions)
+##' @export
+##' 
+plotmap = function(coord, color, border=0){
+  uniregion = unique(coord$abbr); unipoly = unique(coord$poly)
+
+  # color
+  if (!is.null(color)) color=complete_color(color, length(uniregion))
+  if (!is.null(names(color))) {
+    stopifnot(length(setdiff(uniregion,names(color)))==0)
+  } else if (!is.null(color)) names(color) = uniregion
+  
+  # border
+  if (!is.null(border)) border=complete_color(border, length(uniregion))
+  if (!is.null(names(border))) {
+    stopifnot(length(setdiff(uniregion,names(border)))==0)
+  } else names(border) = uniregion
+  
+  # label
+  label = coord$abbr[!duplicated(coord$poly)]
+  names(label) = unipoly
+  
+  # plot
+  plot(coord$x,coord$y,type='n',xlab='',ylab='',xaxt='n',yaxt='n',frame=FALSE)
   for (i in 1:length(unipoly)) {
-    tmpidx = which(poly == unipoly[i])
-    polygon(intplt$x[tmpidx], intplt$y[tmpidx], border = border[label[unipoly[i]]], col = color[label[unipoly[i]]])
+    tmpidx = which(coord$poly == unipoly[i])
+    polygon(coord$x[tmpidx], coord$y[tmpidx], border = border[label[unipoly[i]]], col = color[label[unipoly[i]]])
   }
-  
-  return(list(final=final,interpolation=intplt))
 }

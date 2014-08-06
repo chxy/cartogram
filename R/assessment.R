@@ -1,6 +1,7 @@
 ##' Compare the shape of two polygons which have the same number of vertexes
 ##' @param x1,y1 generated polygons
 ##' @param x2,y2 original polygons
+##' @export
 ##' @examples
 ##' x1 = c(0,0,1,1,0)
 ##' y1 = c(1,0,0,1,1)
@@ -48,7 +49,8 @@ slope = function(x1,x2,y1,y2){
 ##' Compare the shape of the contiguous cartogram with that of the original map
 ##' @param map1 coordinates of the cartogram
 ##' @param map2 coordinates of the map
-##' @parame poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
+##' @param poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
+##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
 ##' dat$State = tolower(dat$State)
@@ -74,8 +76,9 @@ shape_diff = function(map1, map2, poly){
 
 ##' Compute the area of each region for a map
 ##' @param map0 coordinates of a map
-##' @parame poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
+##' @param poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
 ##' @param region a vector of the region names. Must be of the same length with \code{x}, and unique for each region.
+##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
 ##' dat$State = tolower(dat$State)
@@ -101,6 +104,7 @@ polyarea = function(map0,poly,region=poly){
 ##' Compare the current polygon sizes with the target ones
 ##' @param crtsize the current sizes of the polygons
 ##' @param tgtsize the target sizes of the polygons
+##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
 ##' dat$State = tolower(dat$State)

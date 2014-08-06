@@ -5,7 +5,7 @@ state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
 nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
 nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
 # state_border=border_summary_length(state$abbr,state$polygon,state$x,state$y)
-res=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,iteration=100,name.text=TRUE,dist.ratio=1.2,frame=FALSE, col=dat$result)
+res=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,iteration=100,name.text=TRUE,dist.ratio=1.2,frame=FALSE, col=dat$result, xlab='', ylab='')
 
 ##### Example 2 ##### crime:population #####
 

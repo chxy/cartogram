@@ -30,15 +30,20 @@ shinyUI(pageWithSidebar(
                     "Interpolation between the cartogram and original map:",
                     min = 0, 
                     max = 1, 
+                    #animate=TRUE,
                     value = 1,
-                    step = 0.01),
+                    step = 0.01)#,
         
-        submitButton(text = "Update View")
+        #submitButton(text = "Update View")
     ),
     
     mainPanel(
         
-        plotOutput("distPlot",width="100%", height="430px")
+        plotOutput("distPlot",width="100%", height="430px"),
+        
+        textOutput('shapediff'),
+        
+        textOutput('sizediff')
        
     )
 ))

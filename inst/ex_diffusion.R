@@ -6,7 +6,11 @@ dat$State = tolower(dat$State)
 ratio=dat$electors
 vote=dat$result
 names(ratio)=names(vote)=dat$Abbr
-res1 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote)
-res2 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote, diffuse=5)
-res3 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote, nrows=100)
-res4 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote, diffuse=10, nrows=100)
+res1 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio)
+res2 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, diffuse=5)
+res3 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, nrows=100)
+res4 = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, diffuse=10, nrows=100)
+
+plotmap(res1, color=vote)
+newloc = interpolate(res1,state,wt=0.5)
+plotmap(newloc, color=vote)

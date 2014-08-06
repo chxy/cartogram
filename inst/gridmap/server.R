@@ -1,3 +1,4 @@
+library(cartogram)
 library(shiny)
 library(maps)
 

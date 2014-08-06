@@ -1,37 +1,33 @@
+library(cartogram)
 library(shiny)
 library(maps)
 
-data(usGeoInfo)
-data(crimes)
-dat=merge(usCapitals,crimes,by.x='Abbr',by.y='abbr')[,c(1,2,4,5,6,9,10,12)]
-dat=dat[-which(dat$Abbr %in% c('AK','HI')),]
-nbrs=statenbrs[names(statenbrs) %in% dat$Abbr]
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,9:12)]
+state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
+nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
 nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
-dat$density=sqrt(dat$population/dat$TotalSqMi)
-origindist=as.matrix(dist(dat[,3:4]))
-dat$density=dat$density/max(dat$density)*mean(origindist)/5
 
 shinyServer(function(input, output) {
 
     output$origPlot <- renderPlot({
-
+        par(mar=c(0,0,0,0))
         plot(y~x,state,type='n',xlab="",ylab="",frame=FALSE,xaxt='n',yaxt='n')
         map("state",add=TRUE)
-        points(Latitude~Longitude,dat,type='p',col=2, pch=20)
+        points(centroidy~centroidx,dat,type='p',col=2, pch=20)
         if (input$shape==1){
-            circle(dat$Longitude,dat$Latitude,dat$density,square=TRUE,col='pink')
+            circle(dat$centroidx,dat$centroidy,sqrt(dat$electors)/2,square=TRUE,col=dat$result)
         }else{
-            circle(dat$Longitude,dat$Latitude,dat$density,vertex=as.numeric(input$shape),col='pink')
+            circle(dat$centroidx,dat$centroidy,sqrt(dat$electors)/2,vertex=as.numeric(input$shape),col=dat$result)
         }
-        text(dat$Longitude,dat$Latitude,dat$Abbr,cex=0.8)
+        text(dat$centroidx,dat$centroidy,dat$Abbr,cex=0.8)
     })
     
     output$distPlot <- renderPlot({
-        
+      par(mar=c(0,0,0,0))
         if (input$shape==1) {
-            dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,dist.ratio=input$distratio, iteration=input$iteration, animation=FALSE, col='pink', square=TRUE)
+            dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,dist.ratio=input$distratio, iteration=input$iteration, animation=FALSE, col=dat$result, square=TRUE, frame=FALSE, xlab='', ylab='')
         } else {
-            dorling(dat$Abbr,dat$Longitude,dat$Latitude,dat$density,nbrs,dist.ratio=input$distratio, iteration=input$iteration, polygon.vertex=as.numeric(input$shape), animation=FALSE, col='pink')
+            dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,dist.ratio=input$distratio, iteration=input$iteration, polygon.vertex=as.numeric(input$shape), animation=FALSE, col=dat$result, frame=FALSE,  xlab='', ylab='')
         }             
     })
 })

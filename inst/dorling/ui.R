@@ -29,8 +29,8 @@ shinyUI(pageWithSidebar(
     
     mainPanel(
         
-        plotOutput("distPlot",width="100%", height="430px"),
+        plotOutput("distPlot",width="100%", height="200px"),
         
-        plotOutput("origPlot",width="100%", height="525px")        
+        plotOutput("origPlot",width="100%", height="200px")        
     )
 ))
