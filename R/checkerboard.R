@@ -14,6 +14,8 @@
 checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
                         binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50),
                         plot=TRUE, pal=NULL){
+    library(sp)
+    
     nborder=length(name)
     stopifnot(nborder==length(xborder),nborder==length(yborder))
     if (is.null(label)) {label=sort(unique(name)); names(label)=label} else {
@@ -22,65 +24,64 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     }    
     if (!is.null(nbins)) {
         nbins=round(nbins)
-        stopifnot(nbins>10)
+        stopifnot(nbins>=10)
         binwidth=c(diff(range(xborder))/nbins,diff(range(yborder))/nbins)
-    }
-    
-    xrange=matrix(unlist(tapply(xborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
-    yrange=matrix(unlist(tapply(yborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
-
-    xgrid=seq(min(xrange)+0.4*binwidth[1],max(xrange),by=binwidth[1])
-    ygrid=seq(min(yrange)+0.4*binwidth[2],max(yrange),by=binwidth[2])
-    
-    grids=data.frame(x=rep(xgrid,each=length(ygrid)),y=rep(ygrid,times=length(xgrid)))    
-    query=t(apply(grids,1,pointinsquares,sqxrange=xrange,sqyrange=yrange,sqname=sort(unique(name))))
-    query=query[,colSums(is.na(query))!=nrow(query)]
-    maxin=ncol(query)
-    grids[,3:4]=query[,2:1]
-    colnames(grids)[3:4]=c('poly','edge')
-    
-    if (is.null(pal)) {
-        set.seed(1000)
-        pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(unique(label)),rep=FALSE))
     }
     
     txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
     
-    library(sp)
+    xrange=matrix(unlist(tapply(xborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
+    yrange=matrix(unlist(tapply(yborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
+    xgrid=seq(min(xrange)+0.4*binwidth[1],max(xrange),by=binwidth[1])
+    ygrid=seq(min(yrange)+0.4*binwidth[2],max(yrange),by=binwidth[2])
+    grids=expand.grid(x=xgrid,y=ygrid)
+    
+    setTxtProgressBar(txtpb, 0.05)
+    query=t(apply(grids,1,pointinsquares,sqxrange=xrange,sqyrange=yrange,sqname=sort(unique(name))))
+    query=query[,colSums(is.na(query))!=nrow(query)]
+    setTxtProgressBar(txtpb, 0.2)
+    
+    maxin=ncol(query)-1
+    grids[,3:4]=query[,2:1]
+    colnames(grids)[3:4]=c('poly','edge')
+    grids$edge = as.integer(grids$edge)
     idx = which(grids$edge>1)
-    for (k in 1:length(idx)){
-        i=idx[k]
-        pol=na.omit(query[i,2:maxin])
-        ptx=grids[i,1]
-        pty=grids[i,2]
-        whicharea=rep(0,length(pol))
-        for (j in 1:length(pol)){
-            whicharea[j]=point.in.polygon(ptx,pty,xborder[name==pol[j]],yborder[name==pol[j]])
-        }
-        if (any(whicharea>0)) {grids[i,3]=pol[whicharea>0][1]}
-        setTxtProgressBar(txtpb, 0.5/length(idx)*k)
+    mixgrids = cbind(grids,query[,-1],stringsAsFactors=FALSE)[idx,]    
+    for (k in length(region):1) {
+      mixidx = which(apply(mixgrids[,-(1:4)],1,function(a) any(a==region[k],na.rm=TRUE)))
+      setTxtProgressBar(txtpb, 0.6/length(region)*(length(region)-k+1)+0.2)
+      if (length(mixidx)==0) next
+      mixres = sp::point.in.polygon(mixgrids$x[mixidx],mixgrids$y[mixidx],xborder[name==region[k]],yborder[name==region[k]])
+      if (sum(mixres)) mixgrids[mixidx[mixres>0],3] = region[k]
     }
+    grids[idx,3]=mixgrids[,3]
+
     idx = which(grids$edge==1)
-    for (k in 1:length(idx)){
-        i=idx[k]
-        pol=grids[i,3]
-        ptx=grids[i,1]
-        pty=grids[i,2]
-        whicharea=point.in.polygon(ptx,pty,xborder[name==pol],yborder[name==pol])
-        if (whicharea==0) {grids[i,3]=NA}
-        setTxtProgressBar(txtpb, 0.5/length(idx)*k+0.5)
+    extragrids = cbind(grids,query[,2],stringsAsFactors=FALSE)[idx,]
+    extraregion = unique(extragrids$poly)
+    for (k in 1:length(extraregion)) {
+      mixidx = which(extragrids[,5]==extraregion[k])
+      mixres = sp::point.in.polygon(extragrids$x[mixidx],extragrids$y[mixidx],xborder[name==extraregion[k]],yborder[name==extraregion[k]])
+      if (sum(mixres==0)) extragrids[mixidx[mixres==0],3] = NA
+      setTxtProgressBar(txtpb, 0.2/length(extraregion)*k+0.8)
     }
+    grids[idx,3]=extragrids[,3]
+    
     close(txtpb)
     
     grids$label = factor(label[grids$poly],levels=unique(label))
     
     if (plot) {
+      if (is.null(pal)) {
+        set.seed(1000)
+        pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),length(unique(label)),rep=FALSE))
+      }
         # plot(y~x,data=grids,pch=15,col=grids$label)
         grids=grids[order(grids$y,grids$x),]
         image(xgrid,ygrid,matrix(as.integer(grids$label),nrow=length(xgrid),ncol=length(ygrid)),col=pal,xlab='',ylab='',xaxt='n',yaxt='n',frame=F)
     } 
     
-    res = grids[,c(1:3,5)]
+    res = grids[order(grids$x,grids$y),c(1:3,5)]
     attr(res,'nbins') = round(diff(range(xborder))/binwidth[1])
     return(res)
 }
