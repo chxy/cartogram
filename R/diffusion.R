@@ -7,16 +7,20 @@
 ##' @param size the size vector for regions (length must be equal to the number of regions)
 ##' @param gridmap output of the function \code{checkerboard}. Default to be null.
 ##' @param nrows the resolution to get a grid. If \code{gridmap} is not null, then nrows must be the attribute 'nbins' of gridmap.
-##' @param diffuse a positive value to control the diffusing/shrinking rate
-##' @param blank.init fill the NA's of the grids with blank.init * min(size)
-##' @param ... other paramters passed to the cartogram function
+##' @param blank.init between 0 and 1. NA's of the grids are filled with (1-blank.init) * min(density) + blank.init * max(density).
+##' @param sea.init between 0 and 1. The sea is filled with (1-sea.init) * min(density) + sea.init * max(density).
+##' @param sea.width the width of sea. Must be positive.
+##' @param blur Gaussian smoothing paramter passed to the cartogram function.
 ##' @return a data frame with four columns: new x and y coordinates, polygon names and region names.
 ##' @export
 ##' @example inst/ex_diffusion.R
 ##' 
 
-Rcartogram = function(x, y, poly, region, size, gridmap=NULL, nrows=50, diffuse=2, blank.init=.8, ...){
+Rcartogram = function(x, y, poly, region, size, gridmap=NULL, nrows=50, blank.init=0, sea.init=0,  sea.width=1, blur=0){
   library(Rcartogram)
+  
+  stopifnot(blank.init>=0, blank.init<=1, sea.width>0, sea.init>=0, sea.init<=1, blur>=0)
+  
   uniregion = unique(region); unipoly = unique(poly)
   stopifnot(length(x)==length(y), length(x)==length(poly), 
             length(poly)==length(region), length(size)==length(uniregion))
@@ -41,16 +45,17 @@ Rcartogram = function(x, y, poly, region, size, gridmap=NULL, nrows=50, diffuse=
   # get the matrix
   gridrecog = matrix(as.character(gridmap$label),nrow=nrows)
   gridcount = matrix(sapply(gridrecog, function(x){sum(gridrecog==x,na.rm=TRUE)}),nrow=nrow(gridrecog))
-  gridcount[is.na(gridrecog)] = diffuse
-  gridsize = matrix(min(size, na.rm=TRUE)*blank.init, nrow=nrows, ncol=ncols)
+  gridcount[is.na(gridrecog)] = 1
+  gridsize = matrix(1, nrow=nrows, ncol=ncols)
   for (i in 1:length(uniregion)) gridsize[gridrecog==uniregion[i]] = size[uniregion[i]]
   
   # cartogram
   tmp=as.vector(gridsize)/as.vector(gridcount)
+  tmp[is.na(gridrecog)] = sum(range(tmp[!is.na(gridrecog)])*c(1-blank.init,blank.init))
   grid = matrix(tmp,nrow=nrows,ncol = ncols)
-  grid = addBoundary(grid, sea=1, land.mean = min(grid))
+  grid = addBoundary(grid, sea=sea.width, land.mean = sum(range(grid)*c(1-sea.init,sea.init)))
   extra = attr(grid, 'extra')
-  res = cartogram(grid, ...)
+  res = cartogram(grid, zero=TRUE, blur=blur, sea=NA)
   
   # prediction
   pred = predict(res, (x - xlim[1]) / (diff(xlim)) * (nrows - 1) + 1 + extra[1],

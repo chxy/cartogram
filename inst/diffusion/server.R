@@ -9,7 +9,7 @@ vote=dat$result
 
 shinyServer(function(input, output) {
   
-  f1 = reactive(Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, diffuse=input$diffuse, nrows=input$nrows, blank.init=input$blank.init))
+  f1 = reactive(Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, nrows=input$nrows, blank.init=input$blank.init, sea.init=input$sea.init, sea.width=input$sea.width, blur=input$blur))
   
   f2 = reactive(interpolate(f1(),state,input$interpolation))
   
