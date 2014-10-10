@@ -57,7 +57,9 @@ shinyUI(pageWithSidebar(
         
         textOutput('shapediff'),
         
-        textOutput('sizediff')
+        textOutput('sizediff'),
+        
+        plotOutput("diffPlot",width="100%", height="300px")
        
     )
 ))

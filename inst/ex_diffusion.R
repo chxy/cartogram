@@ -17,6 +17,28 @@ plotmap(res1, color=vote)
 newloc = interpolate(res1,state,wt=0.5)
 plotmap(newloc, color=vote)
 
+m=20
+res = data.frame(matrix(NA,nrow=(m+1)*49,ncol=4))
+colnames(res) = c('wt','shape','size','state')
+for (i in (0:m)/m) {
+  newloc = interpolate(res1,state,wt=i)
+  shape = shape_diff(newloc,state,state$polygon)
+  crt = polyarea(newloc,state$polygon,state$abbr)
+  crt = cbind(crt,shape)
+  dif = cbind(tapply(crt[,3],crt[,2],sum),tapply(crt[,4],crt[,2],sum))
+  dif = cbind(dif,size_diff(dif[,1],ratio,TRUE))
+  dif[,1] = i
+  res[(1:49)+i*m*49,1:3] = dif
+  res[(1:49)+i*m*49,4] = rownames(dif)
+}
+res=reshape2::melt(res,c(1,4))
+colnames(res)=c('weight','state','type','difference')
+library(plyr)
+r=ddply(res,c('weight','type'),summarise,difference=mean(difference))
+
+library(ggplot2)
+qplot(weight,difference,data=res,geom='line',group=state,facets=~type,alpha=I(0.2)) + geom_line(aes(group=NULL),color=I(7),size=I(2),data=r)
+
 ##### Example 1 ##### Shiny App #####
 library(shiny)
 runApp('diffusion')
