@@ -104,6 +104,7 @@ polyarea = function(map0,poly,region=poly){
 ##' Compare the current polygon sizes with the target ones
 ##' @param crtsize the current sizes of the polygons
 ##' @param tgtsize the target sizes of the polygons
+##' @param scaled logical. Whether to scale the target sizes.
 ##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
@@ -116,9 +117,12 @@ polyarea = function(map0,poly,region=poly){
 ##' crt = tapply(crt[,3],crt[,2],sum)
 ##' size_diff(crt,ratio)
 ##' 
-size_diff = function(crtsize,tgtsize){
+size_diff = function(crtsize,tgtsize,scaled=TRUE){
   stopifnot(length(crtsize)==length(tgtsize))
-  crtsize = (crtsize-min(crtsize))/max(crtsize)
-  tgtsize = (tgtsize-min(tgtsize))/max(tgtsize)
-  return(sum(abs(crtsize-tgtsize))*sum(crtsize))
+  if (!scaled) {
+    return(abs(crtsize-tgtsize))
+  }
+  tgtsize = tgtsize/median(tgtsize)*median(crtsize)
+  # peri = sqrt(crtsize*pi)*2
+  return(abs(crtsize-tgtsize))
 }
