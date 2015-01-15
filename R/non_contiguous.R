@@ -6,64 +6,103 @@
 ##' length must be as the unique regions and the values must be positive. 
 ##' Suggest to give the region names to the vector; if not given, then 
 ##' the order of the ratios will match the regions.
-##' @param color  a vector of color to fill in the polygons. Auto-completed if 
-##' the length does not match with ratio. Suggest to give the region names to the 
-##' vector; if not given, then the order of the ratios will match the regions.
-##' @param border a vector of polygon borders. Auto-completed if the length 
-##' does not match with ratio. Suggest to give the region names to the vector; 
-##' if not given, then the order of the ratios will match the regions.
-##' @param standardize whether to standardize the rescaling ratio.
-##' @param name.text whether to print the region names on the circles or polygons.
+##' @param anchor a number in [0,1] to select the quantile of ratio on which
+##' the re-scaled polygon will be remain the same size as origin.
+##' If \code{anchor=1}, then there will be no overlapped polygons.
+##' @param adjust whether to adjust the centroids of polygons
+##' to avoid overlapping if \code{anchor<1}.
+##' @param nbr a list of the neighbors of every region. Should be
+##' the output of the function\code{nbrlist()}. Each element is
+##' a vector of all the neighbor names of a region. If \code{nbr=NULL},
+##' then it is assumed that no region has any neighbors, and hence the
+##' argument adjust is set to FALSE. If nbr is not NULL, then names
+##' must be given to all the elements of the list, for matching the
+##' neighbors with the host region name (the second column of poly).
+##' @param refloc a data frame containing at least abbr, x, and y.
+##' Row names must be abbr that can match with region names. Using
+##' as the reference location to adjust the polygon centers. Better
+##' to choose the outcome of a dorling cartogram.
 ##' @return A data frame with region names and the new borders.
 ##' @export
 ##' @example inst/ex_non_contiguous.R
 ##' 
-map_scaling = function(poly,ratio,color=NULL,border=1,standardize=TRUE, name.text=TRUE){
+map_scaling = function(poly,ratio,anchor=0.85,adjust=FALSE,nbr=NULL,refloc=NULL){
     uniregion = unique(poly[,2])
     stopifnot(all(ratio>0), length(uniregion)==nrow(ratio))
     if (!is.null(names(ratio))) {
       stopifnot(length(setdiff(uniregion,names(ratio)))==0)
     } else names(ratio) = uniregion
+    if (anchor==1 | is.null(nbr)) adjust=FALSE
     
-    # ratio
-    ratio=sqrt(ratio)
-    if (standardize) ratio=ratio/max(ratio,na.rm=TRUE)
-    
-    # color and border
-    if (!is.null(border)) border=complete_color(border, length(ratio))
-    if (!is.null(color)) color=complete_color(color, length(ratio))
-    if (!is.null(names(color))) {
-      stopifnot(length(setdiff(uniregion,names(color)))==0)
-    } else if (!is.null(color)) names(color) = uniregion
-    if (!is.null(names(border))) {
-      stopifnot(length(setdiff(uniregion,names(border)))==0)
-    } else names(border) = uniregion
-    
+    # ratio: automatically adjust to a better scaling factor vector
+    ratio = sqrt(ratio/quantile(ratio,anchor,na.rm=TRUE))
+
     # for each region
     dat=poly
-    plot(dat[,3],dat[,4],type='n',xlab='',ylab='',xaxt='n',yaxt='n',frame=FALSE)
+    regioncenter = matrix(0,ncol=2,nrow=length(uniregion))
+    rownames(regioncenter) = uniregion
     for (i in 1:length(uniregion)){
         crtratio=ratio[uniregion[i]]
         # if (length(crtratio) == 0) crtratio=1
         crtidx = which(poly[,2]==uniregion[i])
         crtdat = poly[crtidx, -2]
         
-        crtcenter = centroid_polygon(crtdat[,-1])
+        regioncenter[i,] = centroid_polygon(crtdat[,-1])
         unipoly = unique(crtdat[,1])
         center_vec = center_new = matrix(0,ncol=2,nrow=length(unipoly))
         for (j in 1:length(unipoly)){
           center_vec[j,] = centroid_polygon(crtdat[crtdat[,1]==unipoly[j],-1])
         }
-        center_new[,1]=(1-crtratio)*crtcenter[1]+crtratio*center_vec[,1]
-        center_new[,2]=(1-crtratio)*crtcenter[2]+crtratio*center_vec[,2]
+        center_new[,1]=(1-crtratio)*regioncenter[i,1]+crtratio*center_vec[,1]
+        center_new[,2]=(1-crtratio)*regioncenter[i,2]+crtratio*center_vec[,2]
         for (j in 1:length(unipoly)){
           tmpidx = crtidx[crtdat[,1]==unipoly[j]]
           dat[tmpidx,3:4]=polygon_scaling(crtratio,poly[tmpidx,3:4],center_new[j,])
-          polygon(dat[tmpidx,3], dat[tmpidx,4], border = border[uniregion[i]], col = color[uniregion[i]])
         }
-        if (name.text) text(crtcenter[1], crtcenter[2], uniregion[i], cex=0.8)
     }
-    return(dat)
+    names(dat)[1:4] = c('poly','abbr','x','y')
+    if (all(ratio<=1) | (!adjust)) return(dat)
+    
+    # if refloc is given
+    if (!is.null(refloc)) {
+      for (i in 1:length(uniregion)){
+        crtidx = which(dat[,2]==uniregion[i])
+        if (ratio[uniregion[i]]>1) {
+          dat[crtidx,'x'] = dat[crtidx,'x']-(regioncenter[uniregion[i],1]-refloc[uniregion[i],'x'])*anchor/2
+          dat[crtidx,'y'] = dat[crtidx,'y']-(regioncenter[uniregion[i],2]-refloc[uniregion[i],'y'])*anchor/2
+        } else {
+          dat[crtidx,'x'] = dat[crtidx,'x']-(regioncenter[uniregion[i],1]-refloc[uniregion[i],'x'])*anchor/5
+          dat[crtidx,'y'] = dat[crtidx,'y']-(regioncenter[uniregion[i],2]-refloc[uniregion[i],'y'])*anchor/5
+        }
+      }
+      return(dat)
+    }
+    
+    # if adjust is true and refloc is null
+    collispoly = names(ratio)[ratio>1]
+    collisnbr = nbr[collispoly]
+    allpoly = unique(c(collispoly,unlist(collisnbr)))
+    alldat = dat[dat$abbr %in% allpoly,]
+    collisarea = polyarea(alldat,alldat$poly,alldat$abbr,TRUE)
+    collisarea$radius = sqrt(collisarea$area/pi)
+    colliscenter = regioncenter[allpoly,,drop=FALSE]
+    centerchange = regioncenter[collispoly,,drop=FALSE]
+    centerchange[,1] = centerchange[,2] = 0
+    
+    dat2=dat
+    for (i in order(ratio[collispoly],decreasing=TRUE)) {
+      crtpoly = collispoly[i]
+      crtnbr = collisnbr[[crtpoly]]
+      if (length(crtnbr)==0) next
+      #crtnbr1 = which(!crtnbr %in% collispoly)
+      crtattr = (collisarea[crtnbr,3]/ratio[crtnbr]*(1-ratio[crtnbr])+collisarea[crtpoly,3]/ratio[crtpoly]*(1-ratio[crtpoly]))/2
+      crtdist = sqrt((colliscenter[crtnbr,1]-colliscenter[crtpoly,1])^2+(colliscenter[crtnbr,2]-colliscenter[crtpoly,2])^2)
+      centerchange[crtpoly,1] = sum((colliscenter[crtnbr,1]-colliscenter[crtpoly,1])*crtattr/crtdist)
+      centerchange[crtpoly,2] = sum((colliscenter[crtnbr,2]-colliscenter[crtpoly,2])*crtattr/crtdist)
+      dat2[dat$abbr==crtpoly,3] = dat[dat$abbr==crtpoly,3] + centerchange[crtpoly,1]
+      dat2[dat$abbr==crtpoly,4] = dat[dat$abbr==crtpoly,4] + centerchange[crtpoly,2]
+    }
+    return(dat2)
 }
 
 

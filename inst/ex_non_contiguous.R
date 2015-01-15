@@ -1,38 +1,44 @@
 ##### Example 1 ##### Presidential Election 2012 #####
 
-dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,11:12)]
-ratio=dat$electors/dat$TotalSqMi*2000
-#ratio=dat$electors
+dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,6,9:12)]
+ratio=dat$electors/dat$TotalSqMi
 vote=dat$result
 names(ratio)=names(vote)=dat$Abbr
-res=map_scaling(state[,c(5,4,1,2)],ratio,vote,'white',FALSE,FALSE)
+state_nbrs=nbrlist(state$abbr,state$x,state$y,corner=FALSE)
+nbrs=state_nbrs[names(state_nbrs) %in% dat$Abbr]
+nbrs=lapply(nbrs,function(xv){xv[xv %in% dat$Abbr]})
+
+res1=map_scaling(state[,c(5,4,1,2)],ratio,0.85)
+plotmap(res1,color=vote,border='white',name=TRUE)
+map('state',add=T,col='grey70')
+
+res2=map_scaling(state[,c(5,4,1,2)],ratio,0.9,TRUE,state_nbrs)
+plotmap(res2,color=vote,border='white',name=TRUE)
+map('state',add=T,col='grey70')
+
+resd=dorling(dat$Abbr,dat$centroidx,dat$centroidy,sqrt(dat$electors),nbrs,
+             iteration=110,name.text=TRUE,dist.ratio=1.2,frame=FALSE,
+             col=dat$result, xlab='', ylab='')
+res3=map_scaling(state[,c(5,4,1,2)],ratio,0.87,TRUE,state_nbrs,resd)
+plotmap(res3,color=vote,border='white',name=TRUE)
 map('state',add=T,col='grey70')
 
 
 ##### Example 2 ##### Water area proportion #####
 
-data(usGeoInfo)
-
 r=usCapitals[,c(1,2,6,8)]
-r$WaterRatio=r$WaterSqMi/r$TotalSqMi*5
+r$WaterRatio=r$WaterSqMi/r$TotalSqMi
 vote = r$WaterRatio
 names(vote)=r$Abbr
-#r$State=tolower(r$State)
-#polyname=state[!duplicated(state[,4:5]),3:5]
-#r=merge(polyname,r,by.x=1,by.y=1)
-res=map_scaling(state[,c(5,4,1,2)],vote,FALSE)
-# idx=setdiff(1:nrow(res),rownames(res))
-# res[(1:length(idx))+nrow(res),]=NA
-# rownames(res)[nrow(res)+1-(1:length(idx))]=idx
-# res=res[order(as.integer(rownames(res))),]
-# plot(res[,2],res[,3],type='l')
+res=map_scaling(state[,c(5,4,1,2)],vote,1,FALSE)
+plotmap(res,color='lightblue',border='white',name=TRUE)
 
-res$state=gsub(":.*$","",res$polygon)
-unipoly=!duplicated(res$polygon)
+res$state=gsub(":.*$","",res$poly)
+unipoly=!duplicated(res$poly)
 statelabel=res$state[unipoly]
-names(statelabel)=res$polygon[unipoly]
+names(statelabel)=res$poly[unipoly]
 bin=100
-gridmap=checkerboard(res$x,res$y,res$polygon,statelabel,nbins=bin,plot=TRUE)
+gridmap=checkerboard(res$x,res$y,res$poly,statelabel,nbins=bin,plot=TRUE)
 
 grid1=gridmap[order(gridmap$y,gridmap$x),]
 grid1$x=rep(1:bin,bin)
@@ -59,6 +65,7 @@ dist.ratio=2
 shared.border=NULL
 grid2=grid1
 
+pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),48,rep=FALSE))
 for (s in 1:30){
     grid2=grid2[!is.na(grid2$label),]
     crtDist=as.matrix(dist(crtloc))

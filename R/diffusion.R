@@ -89,11 +89,17 @@ interpolate = function(coord1,coord2,wt=1){
 
 ##' Plot the contiguous cartogram or map
 ##' @param coord a data frame contains x, y, abbr, and poly.
-##' @param color the color vector for regions (length must be equal to the number of regions)
-##' @param border the border vector for regions (length must be equal to the number of regions)
+##' @param color a vector of color to fill in the polygons. Auto-completed
+##' if the length does not match with ratio. We suggest the user to give
+##' the region names to the vector; if not given, then the order of the
+##' ratios will match the regions.
+##' @param border a vector of polygon borders. Auto-completed if the length 
+##' does not match with ratio. We suggest to give the region names to the
+##' vector; if not given, then the order of the ratios will match the regions.
+##' @param name.text whether to print the abbr on the polygons
 ##' @export
 ##' 
-plotmap = function(coord, color, border=0){
+plotmap = function(coord, color, border=0, name.text=FALSE){
   uniregion = unique(coord$abbr); unipoly = unique(coord$poly)
 
   # color
@@ -117,5 +123,12 @@ plotmap = function(coord, color, border=0){
   for (i in 1:length(unipoly)) {
     tmpidx = which(coord$poly == unipoly[i])
     polygon(coord$x[tmpidx], coord$y[tmpidx], border = border[label[unipoly[i]]], col = color[label[unipoly[i]]])
+  }
+  if (name.text) {
+    for (i in 1:length(uniregion)) {
+      tmpidx = which(coord$abbr == uniregion[i])
+      crtcenter = centroid_polygon(coord[tmpidx,3:4])
+      text(crtcenter[1], crtcenter[2], uniregion[i], cex=0.8)
+    }
   }
 }

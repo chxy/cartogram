@@ -6,11 +6,21 @@ shinyUI(pageWithSidebar(
     
     sidebarPanel(
         sliderInput("ratio", 
-                    "Scale of the area:", 
-                    min = 0.05, 
+                    "Inverse scale of the area:", 
+                    min = 0.5, 
                     max = 1, 
-                    value = 1,
-                    step = 0.05)#,
+                    value = 0.85,
+                    step = 0.01),
+        
+        radioButtons("adjust", 
+                    "Adjust the overlapped regions?", 
+                    c("Yes" = 1, 
+                    "No" = 0)),
+        
+        radioButtons("ref", 
+                     "Use the dorling cartogram as a reference?", 
+                     c("Yes" = 1, 
+                       "No" = 0))
         
         #submitButton(text = "Update View")
     ),

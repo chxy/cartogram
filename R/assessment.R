@@ -78,6 +78,7 @@ shape_diff = function(map1, map2, poly){
 ##' @param map0 coordinates of a map
 ##' @param poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
 ##' @param region a vector of the region names. Must be of the same length with \code{x}, and unique for each region.
+##' @param regionarea whether to calculate the area by region or by poly
 ##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
@@ -88,7 +89,7 @@ shape_diff = function(map1, map2, poly){
 ##' res = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote)$final
 ##' polyarea(res,state$polygon,state$abbr)
 ##' 
-polyarea = function(map0,poly,region=poly){
+polyarea = function(map0,poly,region=poly,regionarea=FALSE){
   stopifnot(nrow(map0)==length(poly), length(region)==length(poly))
   unipoly = unique(cbind(poly,region))
   np = nrow(unipoly)
@@ -96,6 +97,14 @@ polyarea = function(map0,poly,region=poly){
   for (i in 1:np){
     idx = which(poly==unipoly[i,1])
     res[i,3] = sp::Polygon(data.frame(x=map0$x[idx],y=map0$y[idx]))@area
+  }
+  if (regionarea) {
+    tmp = tapply(res[,3],res[,2],sum)
+    res2 = res[!duplicated(res[,2]),2:3]
+    res2[,1] = names(tmp)
+    res2[,2] = unname(tmp)
+    rownames(res2) = res2[,1]
+    res = res2
   }
   return(res)
 }
