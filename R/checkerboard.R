@@ -6,14 +6,15 @@
 ##' @param label A vector of the displayed names for polygons. One label could serve several polygons. Must be unique and \code{names(label)} must contain all the unique input \code{name}.
 ##' @param binwidth A vector of length 2 indicating the binwidths in x and y direction. Default to be 1/50 of the range.
 ##' @param plot Whether to plot the checkerboard map.
+##' @param txtbar Whether to print the text processing bar.
 ##' @param pal palette. The input for the argument "col" in \code{image()}.
 ##' @return A data frame of four columns: x and y coordinates of the grids, the name and the label that a grid point belongs to.
 ##' @example inst/ex_gridmap.R
 ##' @export
 ##'
-checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
+checkerboard = function(xborder,yborder,name,label=NULL,xbins=NULL,ybins=NULL,
                         binwidth=c(diff(range(xborder))/50,diff(range(yborder))/50),
-                        plot=TRUE, pal=NULL){
+                        plot=TRUE, txtbar=TRUE, pal=NULL){
     library(sp)
     
     nborder=length(name)
@@ -22,24 +23,59 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
         region=unique(name)
         stopifnot(length(label)>=length(region), all(region %in% names(label)))
     }    
-    if (!is.null(nbins)) {
-        nbins=round(nbins)
-        stopifnot(nbins>=10)
-        binwidth=c(diff(range(xborder))/nbins,diff(range(yborder))/nbins)
+    if (!is.null(xbins)) {
+        xbins=round(xbins)
+        stopifnot(xbins>=10)
+        binwidth[1]=diff(range(xborder))/xbins
+    }
+    if (!is.null(ybins)) {
+      xbins=round(ybins)
+      stopifnot(ybins>=10)
+      binwidth[2]=diff(range(yborder))/ybins
     }
     
-    txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
+    if (txtbar) txtpb = txtProgressBar(min=0,max=1,width = 40,style=3)
+    
+    xsmallpoly = tapply(xborder,name,function(a) diff(range(a))<binwidth[1])
+    ysmallpoly = tapply(yborder,name,function(a) diff(range(a))<binwidth[2])
+    smallpoly = names(which(xsmallpoly & ysmallpoly))
+    smallregion = names(which(tapply(names(label),label,function(a) all(a %in% smallpoly))))
+    if (k <- length(smallregion)) {
+      smallpolycentroid = matrix(NA,nrow=k,ncol=2)
+      rownames(smallpolycentroid) = smallregion
+      colnames(smallpolycentroid) = c('x','y')
+      for (ki in 1:k){
+        idx = (name == names(label[label %in% smallregion[ki]])[1])
+        smallpolycentroid[ki,] = centroid_polygon(cbind(xborder[idx],yborder[idx]))
+      }
+    }
     
     xrange=matrix(unlist(tapply(xborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
     yrange=matrix(unlist(tapply(yborder,name,function(a){c(min(a),max(a))})),ncol=2,byrow=TRUE)
-    xgrid=seq(min(xrange)+0.4*binwidth[1],max(xrange),by=binwidth[1])
-    ygrid=seq(min(yrange)+0.4*binwidth[2],max(yrange),by=binwidth[2])
+    xgrid=seq(min(xrange),max(xrange),by=binwidth[1])
+    xgrid = xgrid[-length(xgrid)]
+    ygrid=seq(min(yrange),max(yrange),by=binwidth[2])
+    ygrid = ygrid[-length(ygrid)]
+    if (k) {
+      adj = t(apply(smallpolycentroid,1,function(a){
+        xadj = a[1]-xgrid[which.min((a[1]-xgrid)>0)-1]
+        yadj = a[2]-ygrid[which.min((a[2]-ygrid)>0)-1]
+        c(xadj,yadj)
+      }))
+      adjmean = colMeans(adj)
+      xgrid = xgrid + adjmean[1]
+      ygrid = ygrid + adjmean[2]
+    } else {
+      xgrid = xgrid + 0.5*binwidth[1]
+      ygrid = ygrid + 0.5*binwidth[2]
+    }
     grids=expand.grid(x=xgrid,y=ygrid)
     
-    setTxtProgressBar(txtpb, 0.05)
+    if (txtbar) setTxtProgressBar(txtpb, 0.05)
     query=t(apply(grids,1,pointinsquares,sqxrange=xrange,sqyrange=yrange,sqname=sort(unique(name))))
     query=query[,colSums(is.na(query))!=nrow(query)]
-    setTxtProgressBar(txtpb, 0.2)
+    #smallregion = c(smallregion,setdiff(unique(unname(label)),unique(label[sort(unique(as.vector(query[,2:4])))])))
+    if (txtbar) setTxtProgressBar(txtpb, 0.2)
     
     maxin=ncol(query)-1
     grids[,3:4]=query[,2:1]
@@ -49,7 +85,7 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     mixgrids = cbind(grids,query[,-1],stringsAsFactors=FALSE)[idx,]    
     for (k in length(region):1) {
       mixidx = which(apply(mixgrids[,-(1:4)],1,function(a) any(a==region[k],na.rm=TRUE)))
-      setTxtProgressBar(txtpb, 0.6/length(region)*(length(region)-k+1)+0.2)
+      if (txtbar) setTxtProgressBar(txtpb, 0.6/length(region)*(length(region)-k+1)+0.2)
       if (length(mixidx)==0) next
       mixres = sp::point.in.polygon(mixgrids$x[mixidx],mixgrids$y[mixidx],xborder[name==region[k]],yborder[name==region[k]])
       if (sum(mixres)) mixgrids[mixidx[mixres>0],3] = region[k]
@@ -63,11 +99,11 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
       mixidx = which(extragrids[,5]==extraregion[k])
       mixres = sp::point.in.polygon(extragrids$x[mixidx],extragrids$y[mixidx],xborder[name==extraregion[k]],yborder[name==extraregion[k]])
       if (sum(mixres==0)) extragrids[mixidx[mixres==0],3] = NA
-      setTxtProgressBar(txtpb, 0.2/length(extraregion)*k+0.8)
+      if (txtbar) setTxtProgressBar(txtpb, 0.2/length(extraregion)*k+0.8)
     }
     grids[idx,3]=extragrids[,3]
     
-    close(txtpb)
+    if (txtbar) close(txtpb)
     
     grids$label = factor(label[grids$poly],levels=unique(label))
     
@@ -82,7 +118,7 @@ checkerboard = function(xborder,yborder,name,label=NULL,nbins=NULL,
     } 
     
     res = grids[order(grids$x,grids$y),c(1:3,5)]
-    attr(res,'nbins') = round(diff(range(xborder))/binwidth[1])
+    attr(res,'nbins') = round(c(diff(range(xborder))/binwidth[1],diff(range(yborder))/binwidth[2]))
     return(res)
 }
 

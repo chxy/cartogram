@@ -12,18 +12,20 @@ check2poly = function(x1,y1,x2,y2){
   n = length(x1)
   stopifnot(n==length(y1),n==length(x2),n==length(y2))
   tmp = data.frame(x1=x1,y1=y1,x2=x2,y2=y2,
-                   s1front=NA,s1rear=NA,s2front=NA,s2rear=NA,
+                   a1front=NA,a1rear=NA,a2front=NA,a2rear=NA,
                    l1front=NA,l1rear=NA,l2front=NA,l2rear=NA,
                    a1=NA,a2=NA,r1=NA,r2=NA)
   n=n-1
   tmp = rbind(tmp[n,,drop=FALSE],tmp)
   rownames(tmp) = c(0:(n+1))
-  tmp$s1front[1:n+1] = slope(tmp$x1[1:n],tmp$x1[1:n+1],tmp$y1[1:n],tmp$y1[1:n+1])
-  tmp$s1rear[1:n+1] = slope(tmp$x1[1:n+2],tmp$x1[1:n+1],tmp$y1[1:n+2],tmp$y1[1:n+1])
-  tmp$s2front[1:n+1] = slope(tmp$x2[1:n],tmp$x2[1:n+1],tmp$y2[1:n],tmp$y2[1:n+1])
-  tmp$s2rear[1:n+1] = slope(tmp$x2[1:n+2],tmp$x2[1:n+1],tmp$y2[1:n+2],tmp$y2[1:n+1])
-  tmp$a1 = atan(tmp$s1front)+atan(tmp$s1rear)
-  tmp$a2 = atan(tmp$s2front)+atan(tmp$s2rear)
+  tmp$a1front[1:n+1] = atan2(tmp$y1[1:n]-tmp$y1[1:n+1],tmp$x1[1:n]-tmp$x1[1:n+1])
+  tmp$a1rear[1:n+1] = atan2(tmp$y1[1:n+2]-tmp$y1[1:n+1],tmp$x1[1:n+2]-tmp$x1[1:n+1])
+  tmp$a2front[1:n+1] = atan2(tmp$y2[1:n]-tmp$y2[1:n+1],tmp$x2[1:n]-tmp$x2[1:n+1])
+  tmp$a2rear[1:n+1] = atan2(tmp$y2[1:n+2]-tmp$y2[1:n+1],tmp$x2[1:n+2]-tmp$x2[1:n+1])
+  tmp$a1 = tmp$a1rear - tmp$a1front
+  tmp$a1[!is.na(tmp$a1) & tmp$a1<0] = tmp$a1[!is.na(tmp$a1) & tmp$a1<0] + 2*pi
+  tmp$a2 = tmp$a2rear - tmp$a2front
+  tmp$a2[!is.na(tmp$a2) & tmp$a2<0] = tmp$a2[!is.na(tmp$a2) & tmp$a2<0] + 2*pi
   tmp$l1front[1:n+1] = sqrt((tmp$x1[1:n]-tmp$x1[1:n+1])^2+(tmp$y1[1:n]-tmp$y1[1:n+1])^2)
   tmp$l1rear[1:n+1] = sqrt((tmp$x1[1:n+2]-tmp$x1[1:n+1])^2+(tmp$y1[1:n+2]-tmp$y1[1:n+1])^2)
   tmp$l2front[1:n+1] = sqrt((tmp$x2[1:n]-tmp$x2[1:n+1])^2+(tmp$y2[1:n]-tmp$y2[1:n+1])^2)
@@ -31,8 +33,10 @@ check2poly = function(x1,y1,x2,y2){
   tmp$r1 = tmp$l1front/tmp$l1rear
   tmp$r2 = tmp$l2front/tmp$l2rear
   res = tmp[1:n+1,]
-  d = sum((abs(res$a1-res$a2)+atan(pmax(res$r1/res$r2,res$r2/res$r1)-1))*
-          (res$l1front+res$l1rear)/2)
+  r1ad = abs(res$a1-res$a2)
+  r2ed = atan(pmax(res$r1/res$r2,res$r2/res$r1)-1)
+  d = sum((r1ad + r2ed) * (res$l1front+res$l1rear)/2)
+  attr(d,'part') = data.frame(ad=r1ad, ed=r2ed, l1f=res$l1front, l1r=res$l1rear, l2f=res$l2front, l2r=res$l2rear,res[,-c(9:12)])
   return(d)
 }
 
@@ -46,10 +50,30 @@ slope = function(x1,x2,y1,y2){
 }
 
 
+##' Get the quadrant of the second point using the first point as origin
+##' @param x1,y1 coordinates of the first point
+##' @param x2,y2 coordinates of the second point
+##' 
+quadrant = function(x2,x1,y2,y1){
+  res = rep(NA,length(x1))
+  res[x2>x1 & y2>y1] = 1
+  res[x2<x1 & y2>y1] = 2
+  res[x2<x1 & y2<y1] = 3
+  res[x2>x1 & y2<y1] = 4
+  res[x2>x1 & y2==y1] = 1
+  res[x2==x1 & y2>y1] = 2
+  res[x2<x1 & y2==y1] = 3
+  res[x2==x1 & y2<y1] = 4
+  res[x2==x1 & y2==y1] = 0
+  return(res)
+}
+
+
 ##' Compare the shape of the contiguous cartogram with that of the original map
 ##' @param map1 coordinates of the cartogram
 ##' @param map2 coordinates of the map
 ##' @param poly a vector of the polygon names. Must be of the same length with \code{map1} and \code{map2}, and unique for each polygon.
+##' @param region a vector of the region names.
 ##' @export
 ##' @examples
 ##' dat=merge(usCapitals,election2012,by.x='Abbr',by.y='state')[-c(1,12),c(1,2,6,11:12)]
@@ -66,7 +90,7 @@ shape_diff = function(map1, map2, poly){
   np = length(unipoly)
   dis = rep(NA,np)
   for (i in 1:np){
-    idx = which(poly==unipoly[i])
+    idx = poly==unipoly[i]
     dis[i] = check2poly(map1$x[idx],map1$y[idx],map2$x[idx],map2$y[idx])
   }
   names(dis) = unipoly
@@ -113,6 +137,7 @@ polyarea = function(map0,poly,region=poly,regionarea=FALSE){
 ##' Compare the current polygon sizes with the target ones
 ##' @param crtsize the current sizes of the polygons
 ##' @param tgtsize the target sizes of the polygons
+##' @param peri perimeters of the polygons. If NULL, then calculated from the current sizes.
 ##' @param scaled logical. Whether to scale the target sizes.
 ##' @export
 ##' @examples
@@ -124,14 +149,16 @@ polyarea = function(map0,poly,region=poly,regionarea=FALSE){
 ##' res = Rcartogram(state$x, state$y, state$poly, state$abbr, ratio, color=vote)$final
 ##' crt = polyarea(res,state$polygon,state$abbr)
 ##' crt = tapply(crt[,3],crt[,2],sum)
-##' size_diff(crt,ratio)
+##' perim = perimeter(state$abbr,state$polygon,state$x,state$y)
+##' size_diff(crt,ratio,perim)
 ##' 
-size_diff = function(crtsize,tgtsize,scaled=TRUE){
+size_diff = function(crtsize,tgtsize,peri=NULL,scaled=TRUE){
   stopifnot(length(crtsize)==length(tgtsize))
   if (!scaled) {
-    return(abs(crtsize-tgtsize))
+    return(abs(atan(crtsize/tgtsize-1)))
   }
-  tgtsize = tgtsize/median(tgtsize)*median(crtsize)
-  # peri = sqrt(crtsize*pi)*2
-  return(abs(crtsize-tgtsize))
+  tgtsize = tgtsize/sum(tgtsize, na.rm=TRUE)
+  crtsize = crtsize/sum(crtsize, na.rm=TRUE)
+  if (is.null(peri)) peri = sqrt(crtsize*pi)*2
+  return(atan(pmax(crtsize/tgtsize,tgtsize/crtsize)-1)*peri)
 }

@@ -81,6 +81,30 @@ border_summary_count = function(region, x, y){
 }
 
 
+##' Calculate the perimeter by region
+##' 
+##' @param region Region names.
+##' @param poly Polygon names. One region may consist of several polygons.
+##' @param x X-coordinates of all the vertexes.
+##' @param y Y-coordinates of all the vertexes.
+##' @return a vector of perimeters by region
+##' @export
+##' @examples
+##' data(usCapitals)
+##' perimeter(state$abbr,state$polygon,state$x,state$y)
+perimeter = function(region, poly, x, y){
+  stopifnot(length(x)==length(region), length(y)==length(region), length(poly)==length(region))
+  dat = data.frame(r=as.character(region), l=as.character(poly),
+                   x=x, y=y, stringsAsFactors=FALSE)
+  dat = dat[which(diff(as.integer(factor(dat$l)))==0),]
+  peri = by(dat,dat$l,function(s){sum(sqrt((diff(s$x))^2+(diff(s$y))^2))})
+  tmp = dat[!duplicated(dat[,1:2]),1:2]
+  tmp$peri = unname(peri[tmp$l])
+  peri = tapply(tmp$peri,tmp$r,sum)
+  return(peri)
+}
+
+
 ##' Measure the length of edges
 ##' 
 ##' Calculate the sum length of all shared edges between regions, 
@@ -123,10 +147,7 @@ border_summary_length = function(region, poly, x, y, nb=NULL){
   dat$qp = paste(dat$q,dat$p)
   
   # get the perimeter
-  peri = by(dat,dat$l,function(s){sum(sqrt((diff(s$x))^2+(diff(s$y))^2))})
-  tmp = dat[!duplicated(dat[,1:2]),1:2]
-  tmp$peri = unname(peri[tmp$l])
-  peri = tapply(tmp$peri,tmp$r,sum)
+  peri = perimeter(region, poly, x, y)
   
   # find the neighbor first
   if (is.null(nb)) nb=nbrlist(region, x, y, corner=FALSE)

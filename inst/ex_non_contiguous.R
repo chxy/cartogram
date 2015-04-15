@@ -31,12 +31,12 @@ r$WaterRatio=r$WaterSqMi/r$TotalSqMi
 vote = r$WaterRatio
 names(vote)=r$Abbr
 res=map_scaling(state[,c(5,4,1,2)],vote,1,FALSE)
-plotmap(res,color='lightblue',border='white',name=TRUE)
+plotmap(res,color='lightblue',border='white',name=FALSE)
 
 res$state=gsub(":.*$","",res$poly)
-unipoly=!duplicated(res$poly)
-statelabel=res$state[unipoly]
-names(statelabel)=res$poly[unipoly]
+statel=unique(res[,c('poly','state','abbr')])
+statelabel=statel$state
+names(statelabel)=statel$poly
 bin=100
 gridmap=checkerboard(res$x,res$y,res$poly,statelabel,nbins=bin,plot=TRUE)
 
@@ -66,7 +66,7 @@ shared.border=NULL
 grid2=grid1
 
 pal=palette(sample(c(rainbow(24),colors()[c(1,4:11,13:26,28:29,76:87)*5+3]),48,rep=FALSE))
-for (s in 1:30){
+for (s in 1:15){
     grid2=grid2[!is.na(grid2$label),]
     crtDist=as.matrix(dist(crtloc))
     frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
