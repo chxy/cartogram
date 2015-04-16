@@ -4,59 +4,59 @@ shinyUI(navbarPage("carto",
                    tabPanel("Diffusion Cartograms",
                             sidebarLayout(
                               sidebarPanel(
-                                sliderInput("nrows", 
-                                            "Grid resolution (row):", 
-                                            min = 10, 
-                                            max = 200, 
-                                            value = 100,
+                                sliderInput("nrows",
+                                            "Grid resolution (row):",
+                                            min = 10,
+                                            max = 200,
+                                            value = 150,
                                             step = 10),
-                                
-                                sliderInput("ncols", 
-                                            "Grid resolution (column):", 
-                                            min = 10, 
-                                            max = 200, 
-                                            value = 60,
+
+                                sliderInput("ncols",
+                                            "Grid resolution (column):",
+                                            min = 10,
+                                            max = 200,
+                                            value = 70,
                                             step = 10),
-                                
-                                sliderInput("blank.init", 
-                                            "Weight to fill in the blank of the grid:", 
-                                            min = -0.1, 
-                                            max = 1, 
-                                            value = 0.1,
+
+                                sliderInput("blank.init",
+                                            "Weight to fill in the blank of the grid:",
+                                            min = -0.1,
+                                            max = 1,
+                                            value = 0.05,
                                             step = 0.05),
-                                
+
                                 sliderInput("sea.init",
                                             "Weight to fill in the sea:",
-                                            min = -0.1, 
-                                            max = 1, 
-                                            value = 0.1,
+                                            min = -0.1,
+                                            max = 1,
+                                            value = 0.05,
                                             step = 0.05),
-                                
+
                                 sliderInput("sea.width",
                                             "Width of the sea:",
-                                            min = 0.1, 
-                                            max = 5, 
-                                            value = 2.1,
+                                            min = 0,
+                                            max = 5,
+                                            value = 3,
                                             step = 0.5),
-                                
+
                                 sliderInput("blur",
                                             "Gaussian smoothing parameter for the diffusion:",
-                                            min = 0, 
-                                            max = 3, 
-                                            value = 0,
+                                            min = 0,
+                                            max = 3,
+                                            value = 1,
                                             step = 0.1),
-                                
+
                                 sliderInput("interpolation",
                                             "Interpolation between the cartogram and original map:",
-                                            min = 0, 
-                                            max = 1, 
+                                            min = 0,
+                                            max = 1,
                                             #animate=TRUE,
                                             value = 1,
                                             step = 0.01)#,
-                                
+
                                 #submitButton(text = "Update View")
                               ),
-                              
+
                               mainPanel(
                                 plotOutput("distPlot",width="100%", height="430px"),
                                 textOutput('shapediff'),
