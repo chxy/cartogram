@@ -7,6 +7,7 @@
 ##' @param nbr A list of the neighbors of every region. Each element is a vector of all the neighbor names of a region. If nbr=NULL, then it is assumed that no region has any neighbors. If nbr is not NULL, then names should be given to all the elements of the list, for matching the neighbors with the host region name, otherwise the parameter "name" (a character vector) will be used as the element names of nbr. Besides, any values in nbr that are not in "name" will be removed. The length of nbr could be different from the length of "name", but any element in nbr whose name is not in "name" will be removed too.
 ##' @param shared.border A matrix of the counts of shared borders, typically generated from the function \code{border_summary_length()}. It is used to scale the attract force.
 ##' @param color a vector of color to fill in the circles or polygons. Auto-completed if the length does not match with name.
+##' @param rescale Re-calculate and scale the radius if TRUE.
 ##' @param tolerance Tolerant value for the sum of overlapped radii.
 ##' @param dist.ratio The threshold to determine whether an attract force is added. It is applied to the ratio of the distance between two centroids and the sum of the two radii.
 ##' @param iteration The limit of the number of iterations. Default to be 9999.
@@ -19,7 +20,7 @@
 ##' @example inst/ex_dorling.R
 ##' @export
 ##' 
-dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, color=NULL, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, nbredge=ifelse(is.null(nbr),FALSE,TRUE), name.text=TRUE, ggplot2=FALSE, ...){
+dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, color=NULL, rescale=FALSE, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, nbredge=ifelse(is.null(nbr),FALSE,TRUE), name.text=TRUE, ggplot2=FALSE, ...){
     n=length(name)
     stopifnot(n==length(centroidx), n==length(centroidy), n==length(density), is.numeric(iteration))
     
@@ -56,7 +57,7 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
     origindist=as.matrix(dist(dat[,2:3]))
     
     # rescale the density (the radius) # 3/5/parameter here?
-    dat$density=dat$density/max(dat$density)*mean(origindist)/5
+    if (rescale) dat$density = dat$density/max(dat$density)*mean(origindist)/5
     
     # the closest distance for paired centroids
     circleDist=outer(dat$density,dat$density,"+")
