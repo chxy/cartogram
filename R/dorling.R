@@ -1,5 +1,5 @@
 ##' Produce a Pseudo-Dorling Cartogram.
-##' 
+##'
 ##' @param name A vector of region names.
 ##' @param centroidx A vector of x-coordinates of the regions.
 ##' @param centroidy A vector of y-coordinates of the regions.
@@ -8,6 +8,7 @@
 ##' @param shared.border A matrix of the counts of shared borders, typically generated from the function \code{border_summary_length()}. It is used to scale the attract force.
 ##' @param color a vector of color to fill in the circles or polygons. Auto-completed if the length does not match with name.
 ##' @param rescale Re-calculate and scale the radius if TRUE.
+##' @param k number of clusters. Default to be 1.
 ##' @param tolerance Tolerant value for the sum of overlapped radii.
 ##' @param dist.ratio The threshold to determine whether an attract force is added. It is applied to the ratio of the distance between two centroids and the sum of the two radii.
 ##' @param iteration The limit of the number of iterations. Default to be 9999.
@@ -17,24 +18,25 @@
 ##' @param nbredge whether to draw the lines between neighbor regions.
 ##' @param name.text whether to print the region names on the circles or polygons.
 ##' @param ggplot2 whether to use ggplot2 to draw the cartogram.
+##' @return A data frame of ID, x/y-coordinates, and radius for the circles.
 ##' @example inst/ex_dorling.R
 ##' @export
-##' 
-dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, color=NULL, rescale=FALSE, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, nbredge=ifelse(is.null(nbr),FALSE,TRUE), name.text=TRUE, ggplot2=FALSE, ...){
+##'
+dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=NULL, color=NULL, rescale=FALSE, k=1, tolerance=0.1, dist.ratio=1.2, iteration=9999, polygon.vertex=100, animation=TRUE, sleep.time=0.3, nbredge=ifelse(is.null(nbr),FALSE,TRUE), name.text=TRUE, ggplot2=FALSE, ...){
     n=length(name)
     stopifnot(n==length(centroidx), n==length(centroidy), n==length(density), is.numeric(iteration))
-    
+
     # color vector
     if (!is.null(color)) color=complete_color(color, n)
-    
+
     # identify all the names
     name=as.character(name)
     if (is.null(names(nbr)) && sum(duplindex <- duplicated(name))) {
         name[duplindex]=paste(name[duplindex],name[duplindex],1:sum(duplindex),sep="_")
     }
-    
+
     # clean "nbr"
-    if (!is.null(nbr)) {        
+    if (!is.null(nbr)) {
         if (is.null(names(nbr))) {
             stopifnot(n==length(nbr))
             names(nbr)=name
@@ -52,61 +54,73 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
     # Set up the data
     dat=data.frame(name=name,x=centroidx,y=centroidy,density=density,stringsAsFactors=FALSE)
     rownames(dat)=dat$name
-    
-    # original distance
-    origindist=as.matrix(dist(dat[,2:3]))
-    
+
     # rescale the density (the radius) # 3/5/parameter here?
     if (rescale) dat$density = dat$density/max(dat$density)*mean(origindist)/5
-    
-    # the closest distance for paired centroids
-    circleDist=outer(dat$density,dat$density,"+")
-    diag(circleDist)=0
-    colnames(circleDist)=rownames(circleDist)=name
-    
-    # set up initial values
-    # crtloc is the current centroid locations
-    # frc is the force, including repel force and attract force
-    crtloc=frc=dat[,2:3]
-    crtDist=origindist
-    s=0
-    err=circleDist-crtDist
-    
-    while (sum(sapply(err,max,0))>tolerance) {
+
+    # find the clusters
+    datidx = rep(1,nrow(dat))
+    if (k>1) {
+      hc = hclust(dist(dat[,2:3]),"ward.D2")
+      datidx = cutree(hc, k=k)
+    }
+    origdat = dat
+
+    # loop to optimize clusters
+    for (icluster in 1:k) {
+
+      dat = origdat[datidx==icluster,]
+
+      # original distance
+      origindist=as.matrix(dist(dat[,2:3]))
+
+      # the closest distance for paired centroids
+      circleDist=outer(dat$density,dat$density,"+")
+      diag(circleDist)=0
+      colnames(circleDist)=rownames(circleDist)=name[datidx==icluster]
+
+      # set up initial values
+      # crtloc is the current centroid locations
+      # frc is the force, including repel force and attract force
+      crtloc=frc=dat[,2:3]
+      crtDist=origindist
+      s=0
+      err=circleDist-crtDist
+
+      while (sum(sapply(err,max,0))>tolerance) {
         s = s + 1
         if (!is.null(iteration) && s>iteration) {
-            warning("Reach the largest iteration limit.")
-            break
+          warning("Reach the largest iteration limit.")
+          break
         }
         if (s%%10==0) cat("Iteration: ",s,"\n")
         if (animation) {
-            circle(crtloc$x,crtloc$y,dat$density,vertex=polygon.vertex,
-                   border=if(is.null(color) | all(color==color[1])){1}else{color},
-                   col=color,add=FALSE,xaxt='n',yaxt='n', ...)
-            points(crtloc$x,crtloc$y,col=if(is.null(color)){2}else{color},pch=20)
-            if (nbredge) segments(crtloc[edge[,1],1],crtloc[edge[,1],2],
-                                  crtloc[edge[,2],1],crtloc[edge[,2],2],col='grey70')
-            if (name.text) text(crtloc$x,crtloc$y,dat$name,cex=0.8)
-            Sys.sleep(sleep.time)
+
+          origdat[datidx==icluster,] = dat
+          plot.dorling(cx=origdat$x,cy=origdat$y,cd=origdat$density,v=polygon.vertex,
+                       color=color,cpoint=TRUE,nbredge=nbredge,ctext=name.text,
+                       cedge=if(nbredge){edge}else{NULL},
+                       cname=origdat$name,...)
+          Sys.sleep(sleep.time)
         }
-               
+
         frc$xforce=frc$yforce=frc$xattract=frc$yattract=frc$xrepel=frc$yrepel=0.00000
-        
+
         # Calculate the repel force
         idx = circleDist > crtDist
         #idx = idx & lower.tri(idx)
         for (i in which(rowSums(idx)>0)){
-            #if (length(nbr[[name[i]]])==0) next
-            for (j in which(idx[i,])){
+          #if (length(nbr[[name[i]]])==0) next
+          for (j in which(idx[i,])){
             #for (j in na.omit(which(idx[i,])[nbr[[name[i]]]])){
-                ratio=err[i,j]/crtDist[i,j]/4
-                frc$xrepel[i]=frc$xrepel[i]+ratio*(crtloc$x[i]-crtloc$x[j])
-                frc$xrepel[j]=frc$xrepel[j]+ratio*(crtloc$x[j]-crtloc$x[i])
-                frc$yrepel[i]=frc$yrepel[i]+ratio*(crtloc$y[i]-crtloc$y[j])
-                frc$yrepel[j]=frc$yrepel[j]+ratio*(crtloc$y[j]-crtloc$y[i])
-            }
+            ratio=err[i,j]/crtDist[i,j]/4
+            frc$xrepel[i]=frc$xrepel[i]+ratio*(crtloc$x[i]-crtloc$x[j])
+            frc$xrepel[j]=frc$xrepel[j]+ratio*(crtloc$x[j]-crtloc$x[i])
+            frc$yrepel[i]=frc$yrepel[i]+ratio*(crtloc$y[i]-crtloc$y[j])
+            frc$yrepel[j]=frc$yrepel[j]+ratio*(crtloc$y[j]-crtloc$y[i])
+          }
         }
-        
+
         # Calculate the attract force
         for (i in 1:length(name)){
           if (length(nbr[[name[i]]])==0) next
@@ -122,11 +136,11 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
             }
           }
         }
-        
+
         # Find the final force
         frc$xforce=frc$xrepel+frc$xattract
         frc$yforce=frc$yrepel+frc$yattract
-        
+
         # Reduce the force if it changes the relative direction of the neighbors
         for (i in order(sapply(nbr,length),decreasing=TRUE)){
           closest = frc[c(name[i],nbr[[name[i]]]),]
@@ -154,34 +168,62 @@ dorling = function(name, centroidx, centroidy, density, nbr=NULL, shared.border=
             }
           }
         }
-#         closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
-#         closest$xdist=apply(closest,1,function(xv){abs(crtloc[xv[1],1]-crtloc[xv[2],1])})
-#         closest$ydist=apply(closest,1,function(xv){abs(crtloc[xv[1],2]-crtloc[xv[2],2])})
-#         closest$dist=sqrt(closest$xdist^2+closest$ydist^2)
-#         closest$xforce=abs(frc$xforce)
-#         closest$yforce=abs(frc$yforce)
-#         closest$force=sqrt(closest$xforce^2+closest$yforce^2)
-#         closest$xratio=closest$xdist/closest$xforce
-#         closest$yratio=closest$ydist/closest$yforce
-#         closest$ratio=closest$dist/closest$force
-#         closest$xratio[closest$xratio<tolerance]=1
-#         closest$yratio[closest$yratio<tolerance]=1
-#         closest$ratio[closest$ratio<tolerance]=1
-#         closest$r=pmin(closest$xratio,closest$yratio,closest$ratio,na.rm=TRUE)
-#         closest$r[closest$r>1]=1
-#         frc$xforce=frc$xforce*closest$r
-#         frc$yforce=frc$yforce*closest$r
+        #         closest=data.frame(cbind(rownames(crtDist),rownames(crtDist)[nnbr(crtDist,k=1)]))
+        #         closest$xdist=apply(closest,1,function(xv){abs(crtloc[xv[1],1]-crtloc[xv[2],1])})
+        #         closest$ydist=apply(closest,1,function(xv){abs(crtloc[xv[1],2]-crtloc[xv[2],2])})
+        #         closest$dist=sqrt(closest$xdist^2+closest$ydist^2)
+        #         closest$xforce=abs(frc$xforce)
+        #         closest$yforce=abs(frc$yforce)
+        #         closest$force=sqrt(closest$xforce^2+closest$yforce^2)
+        #         closest$xratio=closest$xdist/closest$xforce
+        #         closest$yratio=closest$ydist/closest$yforce
+        #         closest$ratio=closest$dist/closest$force
+        #         closest$xratio[closest$xratio<tolerance]=1
+        #         closest$yratio[closest$yratio<tolerance]=1
+        #         closest$ratio[closest$ratio<tolerance]=1
+        #         closest$r=pmin(closest$xratio,closest$yratio,closest$ratio,na.rm=TRUE)
+        #         closest$r[closest$r>1]=1
+        #         frc$xforce=frc$xforce*closest$r
+        #         frc$yforce=frc$yforce*closest$r
         crtloc=crtloc+frc[,8:7]
         crtDist=as.matrix(dist(crtloc))
         err = circleDist-crtDist
+        dat[,2:3] = crtloc
+      }
+      origdat[datidx==icluster,] = dat
     }
-    
-    circle(crtloc$x,crtloc$y,dat$density,vertex=polygon.vertex,
-           border=if(is.null(color) | all(color==color[1])){1}else{color},
-           col=color,add=FALSE,xaxt='n',yaxt='n', ...)
-    points(crtloc$x,crtloc$y,col=if(is.null(color)){2}else{color},pch=20)
-    if (nbredge) segments(crtloc[edge[,1],1],crtloc[edge[,1],2],
-                          crtloc[edge[,2],1],crtloc[edge[,2],2],col='grey70')
-    if (name.text) text(crtloc$x,crtloc$y,dat$name,cex=0.8)
-    return(data.frame(region=name,crtloc,radius=dat$density))
+
+    plot.dorling(cx=origdat$x,cy=origdat$y,cd=origdat$density,v=polygon.vertex,
+                 color=color,cpoint=TRUE,nbredge=nbredge,ctext=name.text,
+                 cedge=if(nbredge){edge}else{NULL},
+                 cname=origdat$name,...)
+    names(origdat)=c('region','x','y','radius')
+    return(origdat)
+}
+
+
+##' Plot circles and centroids for a dorling cartogram.
+##'
+##' @param cx x-coordinates for centroids
+##' @param cy y-coordinates for centroids
+##' @param cd radius of circles.
+##' @param v number of polygon vertice.
+##' @param color a vector of color to fill in the circles or polygons.
+##' @param cpoint whether to draw red dots at the centroids.
+##' @param nbredge whether to draw the lines between neighbor regions.
+##' @param ctext whether to print the region names on the circles or polygons.
+##' @param cedge if nbredge is TRUE, then cedge is a data frame of two columns. See \function{dorling} for details.
+##' @param cname if ctext is TRUE, then cname is a vector of labels for the centroids.
+##' @param cmap map data
+##' @export
+##'
+plot.dorling = function(cx,cy,cd,v,color,cpoint=TRUE,nbredge=FALSE,ctext=TRUE,cedge=NULL,cname=NULL,cmap=NULL,...){
+  circle(cx,cy,cd,vertex=v,
+         border=if(is.null(color) | all(color==color[1])){1}else{color},
+         col=color,add=FALSE,xaxt='n',yaxt='n', ...)
+  points(cx,cy,col=if(is.null(color)){2}else{color},pch=20)
+  if (nbredge) segments(cx[cedge[,1]],cy[cedge[,1]],
+                        cx[cedge[,2]],cy[cedge[,2]],col='grey70')
+  if (ctext) text(cx,cy,cname,cex=0.8)
+  if (!is.null(cmap)) maps::map(cmap, add=TRUE)
 }
